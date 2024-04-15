@@ -217,7 +217,7 @@ def visualise_experiment_value_reset_estimate(
     cmap = cm.viridis
     m = cm.ScalarMappable(norm=norm, cmap=cmap)
     colors = m.to_rgba(values.detach().cpu())
-    ax.set_title("Value Function Visualisation")
+    ax.set_title(f"Reset Value {experiment.reset_value}")
     ax.scatter(states[:, 0], states[:, 1], c=colors)
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)

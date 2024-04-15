@@ -7,7 +7,7 @@ env:
 cats:
   fixed_reset: false
   death_not_end: true
-  enable_policy_sampling: true
+  enable_policy_sampling: false
   reset_action:
     enable: false
     penalty: 0.0
@@ -32,7 +32,7 @@ algorithm:
   lr: 0.01
   update_frequency: 1
   clip_grad_norm: 1
-  ensemble_number: 5
+  ensemble_number: 2
   actor:
     features: 128
   critic:

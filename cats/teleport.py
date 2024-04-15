@@ -207,6 +207,7 @@ class FIFOTeleportMemory(TeleportMemory):
         )
         obs = obs.cpu().numpy()
         self.episode_step = self.episode_step.item()
+        self.state = self.teleport_target_saves[tid]
         env = copy.deepcopy(self.teleport_target_saves[tid])
         collector.env, collector.obs = env, obs
         collector.env.np_random = self.rng.build_generator().numpy

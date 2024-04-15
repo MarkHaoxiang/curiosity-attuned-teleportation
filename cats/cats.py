@@ -103,7 +103,7 @@ class CatsExperiment:
             self.teleport_memory.update(env=self.collector.env, obs=s_0_c)
 
             if d_c or t_c:
-                self._reset(s_1_c)
+                self._reset(s_1_c, terminate=d_c)
 
             # Updates
             mb_size = self.cfg.train.minibatch_size
@@ -141,8 +141,8 @@ class CatsExperiment:
                 a_2 = self.algorithm.policy_fn(reset_sample, critic=c_2.target)
                 target_max_1 = c_1.target.q(reset_sample, a_1).squeeze()
                 target_max_2 = c_2.target.q(reset_sample, a_2).squeeze()
-                reset_value = torch.minimum(target_max_1, target_max_2).mean().item()
-                aux.v_1 = aux.v_1 * reset_value
+                self.reset_value = torch.minimum(target_max_1, target_max_2).mean().item() - self.reset_as_an_action.penalty
+                aux.v_1 = aux.v_1 * self.reset_value
                 if self.reset_as_an_action.enable:
                     select = torch.logical_or(batch.t, batch.d)
                 elif self.death_is_not_the_end:
@@ -152,7 +152,7 @@ class CatsExperiment:
                 # Since we don't consider extrinsic rewards (for now)
                 # Manually add the penalty to intrinsic rewards
                 if self.reset_as_an_action:
-                    r_i = r_i - batch.t * self.reset_as_an_action.penalty
+                    r_i = r_i
 
             if self.death_is_not_the_end:
                 batch.d = torch.zeros_like(batch.d, device=self.device).bool()
@@ -165,10 +165,10 @@ class CatsExperiment:
                 self.logger.epoch()
                 log = {}
                 if self.death_is_not_the_end or self.reset_as_an_action:
-                    log["reset_value"] = reset_value
-                if isinstance(self.intrinsic, RandomNetworkDistillation):
-                    log["evaluate/intrinsic"] = evaluate_rnd(self)
-                log["evaluate/entropy"] = entropy_memory(self.memory.rb)
+                    log["reset_value"] = self.reset_value
+                # if isinstance(self.intrinsic, RandomNetworkDistillation):
+                #     log["evaluate/intrinsic"] = evaluate_rnd(self)
+                # log["evaluate/entropy"] = entropy_memory(self.memory.rb)
                 self.logger.log(log)
 
         # Store output
@@ -209,10 +209,11 @@ class CatsExperiment:
         )
         self.intrinsic.initialise(batch)
 
-    def _reset(self, obs):
+    def _reset(self, obs, terminate):
         # Collector actually already resets the policy, so don't need to repeat here
         self.logger.log(
             {
+                "reset_terminate": terminate,
                 "reset_step": self.teleport_memory.episode_step,
                 "reset_obs": obs,
             }
@@ -222,7 +223,7 @@ class CatsExperiment:
             self.logger.log(
                 {
                     "teleport_targets_step": tid,
-                    "teleport_targets_obs": n_obs,
+                    "teleport_obs": n_obs,
                 }
             )
         else:
