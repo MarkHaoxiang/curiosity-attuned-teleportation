@@ -4,10 +4,11 @@ defaults:
 
 env:
   name: MountainCarContinuous-v0
+  max_episode_steps: 10000
 cats:
   fixed_reset: false
   death_not_end: true
-  enable_policy_sampling: false
+  enable_policy_sampling: true
   reset_action:
     enable: false
     penalty: 0.0
@@ -19,7 +20,7 @@ cats:
     kwargs:
       e: 0.0
     memory:
-      type: fifo
+      type: episode
       capacity: 1024
 train:
   initial_collection_size: 256
@@ -32,7 +33,7 @@ algorithm:
   lr: 0.01
   update_frequency: 1
   clip_grad_norm: 1
-  ensemble_number: 2
+  ensemble_number: 5
   actor:
     features: 128
   critic:

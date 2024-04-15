@@ -222,7 +222,7 @@ class CatsExperiment:
             tid, _, n_obs = self.reset_module.select(self.collector)
             self.logger.log(
                 {
-                    "teleport_targets_step": tid,
+                    "teleport_step": tid,
                     "teleport_obs": n_obs,
                 }
             )
@@ -292,6 +292,7 @@ class CatsExperiment:
     def _build_env(self):
         self.env = build_env(**self.cfg.env)
 
+        # self.env = ActionLimitingWrapper(self.env)
         # Fixed-Reset
         if self.fixed_reset:
             self.env = FixedResetWrapper(self.env)

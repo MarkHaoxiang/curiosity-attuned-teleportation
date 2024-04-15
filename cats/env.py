@@ -49,3 +49,9 @@ class FixedResetWrapper(gym.Wrapper):
         if seed is not None:
             self._seed = seed
         return super().reset(seed=self._seed, options=options)
+
+class ActionLimitingWrapper(gym.ActionWrapper):
+    def action(self, action: Any) -> Any:
+        action = np.clip(action, self.action_space.low, self.action_space.high)
+        action = action / 5
+        return action

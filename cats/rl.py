@@ -142,8 +142,8 @@ class QTOptCats(Algorithm, HasCritic, HasValue):
         with torch.no_grad():
             # Implement a variant of Clipped Double-Q Learning
             # Randomly sample two networks
-            c_1 = self.critics.sample_network()
-            c_2 = self.critics.sample_network()
+            c = self.critics.sample_networks(2)
+            c_1, c_2 = c[0], c[1]
             a_1 = self.policy_fn(batch.s_1, critic=c_1.target)
             a_2 = self.policy_fn(batch.s_1, critic=c_2.target)
             target_max_1 = c_1.target.q(batch.s_1, a_1).squeeze()

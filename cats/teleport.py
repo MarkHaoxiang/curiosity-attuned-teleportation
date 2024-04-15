@@ -137,8 +137,8 @@ class LatestEpisodeTeleportMemory(TeleportMemory):
 
     def update(self, env: gym.Env, obs: NDArray[Any]):
         self.teleport_target_saves.append(self.state)
-        self.state = copy.deepcopy(env)
         self.teleport_target_observations.append(obs)
+        self.state = copy.deepcopy(env)
         self.episode_step += 1
 
     def targets(self):
@@ -163,8 +163,8 @@ class LatestEpisodeTeleportMemory(TeleportMemory):
             copy.deepcopy(self.teleport_target_saves[tid]),
             self.teleport_target_observations[tid],
         )
-        obs = obs.cpu().numpy()
         # Update Collector State
+        self.state = self.teleport_target_saves[tid]
         collector.env, collector.obs = env, obs
         collector.env.np_random = self.rng.build_generator().numpy
         return env, obs
