@@ -28,7 +28,7 @@ train:
   minibatch_size: 128
 algorithm:
   type: qt_opt
-  gamma: 0.99
+  gamma: 0.9
   tau: 0.005
   lr: 0.01
   update_frequency: 1

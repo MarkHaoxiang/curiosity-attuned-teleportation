@@ -14,6 +14,7 @@ from kitten.experience.memory import ReplayBuffer
 from kitten.experience.collector import GymCollector
 from kitten.experience.interface import Memory
 
+from kitten.nn import HasValue
 from cats.rl import QTOptCats
 
 
@@ -29,7 +30,7 @@ class TeleportStrategy(ABC):
 
 class EpsilonGreedyTeleport(TeleportStrategy):
     def __init__(
-        self, algorithm: QTOptCats, rng: Generator | None = None, e: float = 0.1
+        self, algorithm: HasValue, rng: Generator | None = None, e: float = 0.1
     ) -> None:
         super().__init__(algorithm=algorithm)
         self._e = e
@@ -50,7 +51,7 @@ class EpsilonGreedyTeleport(TeleportStrategy):
 
 class BoltzmannTeleport(TeleportStrategy):
     def __init__(
-        self, algorithm: QTOptCats, rng: Generator | None = None, alpha: float = 0.1
+        self, algorithm: HasValue, rng: Generator | None = None, alpha: float = 0.1
     ) -> None:
         super().__init__(algorithm=algorithm)
         self._a = alpha

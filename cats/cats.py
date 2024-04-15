@@ -135,8 +135,8 @@ class CatsExperiment:
             # Question: Should policy learn the value of resetting?
             if self.death_is_not_the_end or self.reset_as_an_action.enable:
                 reset_sample = self.reset_memory.targets()
-                c_1 = self.algorithm.critics.sample_network()
-                c_2 = self.algorithm.critics.sample_network()
+                c = self.algorithm.critics.sample_networks(2)
+                c_1, c_2 = c[0], c[1]
                 a_1 = self.algorithm.policy_fn(reset_sample, critic=c_1.target)
                 a_2 = self.algorithm.policy_fn(reset_sample, critic=c_2.target)
                 target_max_1 = c_1.target.q(reset_sample, a_1).squeeze()
