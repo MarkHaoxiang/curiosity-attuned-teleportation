@@ -29,7 +29,6 @@ def main(cfg: DictConfig):
     path = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
     cfg.log.path = path
     run(cfg)
-    
 
 
 if __name__ == "__main__":

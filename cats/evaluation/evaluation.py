@@ -15,6 +15,7 @@ from sklearn.neighbors import KernelDensity
 
 from kitten.experience.memory import ReplayBuffer
 from kitten.experience import Transitions
+
 if TYPE_CHECKING:
     from ..cats import CatsExperiment
 
@@ -27,11 +28,8 @@ def entropy_memory(memory: ReplayBuffer) -> float:
     return -log_likelihoods.mean()
 
 
-def visualise_state_targets(experiment: CatsExperiment,
-                            fig: Figure,
-                            ax: Axes,
-                            key: str,
-                            title: str
+def visualise_state_targets(
+    experiment: CatsExperiment, fig: Figure, ax: Axes, key: str, title: str
 ):
     env = experiment.env
 
@@ -58,6 +56,7 @@ def visualise_state_targets(experiment: CatsExperiment,
 
     fig.colorbar(m, ax=ax)
     return fig, ax
+
 
 def inverse_to_env(env: gym.Env, s):
     match env.spec.id:
@@ -127,6 +126,7 @@ def visualise_memory(experiment: CatsExperiment, fig: Figure, ax: Axes):
 
     fig.colorbar(m, ax=ax)
 
+
 def generate_2d_grid(experiment: CatsExperiment):
     _, (x_label, x_low, x_high), (y_label, y_low, y_high) = env_to_2d(
         experiment.env, None
@@ -149,6 +149,7 @@ def generate_2d_grid(experiment: CatsExperiment):
     s = experiment.rmv.transform(s)
     return s, states, x_label, y_label
 
+
 def visualise_experiment_value_estimate(
     experiment: CatsExperiment,
     fig: Figure,
@@ -167,10 +168,8 @@ def visualise_experiment_value_estimate(
     ax.set_ylabel(y_label)
     fig.colorbar(m, ax=ax)
 
-def visualise_experiment_policy(experiment: CatsExperiment,
-                                fig: Figure,
-                                ax: Axes
-):
+
+def visualise_experiment_policy(experiment: CatsExperiment, fig: Figure, ax: Axes):
     # Policy
     s, states, x_label, y_label = generate_2d_grid(experiment)
     actions = experiment.algorithm.policy_fn(s)[:, :1]
@@ -185,10 +184,8 @@ def visualise_experiment_policy(experiment: CatsExperiment,
         ax.set_ylabel(y_label)
         fig.colorbar(m, ax=ax)
 
-def visualise_reset_policy(experiment: CatsExperiment,
-                           fig: Figure,
-                           ax: Axes
-):
+
+def visualise_reset_policy(experiment: CatsExperiment, fig: Figure, ax: Axes):
     # Policy
     s, states, x_label, y_label = generate_2d_grid(experiment)
     actions = experiment.algorithm.policy_fn(s)[:, -1]
@@ -203,6 +200,7 @@ def visualise_reset_policy(experiment: CatsExperiment,
         ax.set_ylabel(y_label)
         fig.colorbar(m, ax=ax)
 
+
 def visualise_experiment_value_reset_estimate(
     experiment: CatsExperiment,
     fig: Figure,
@@ -211,7 +209,7 @@ def visualise_experiment_value_reset_estimate(
     s, states, x_label, y_label = generate_2d_grid(experiment)
     # V
     a = experiment.algorithm.policy_fn(s)
-    a[:, -1] = 1 # Reset action
+    a[:, -1] = 1  # Reset action
     values = experiment.algorithm.critic.q(s, a)
     norm = mpl.colors.Normalize(vmin=values.min(), vmax=values.max())
     cmap = cm.viridis

@@ -6,6 +6,7 @@ import numpy as np
 import torch
 
 from kitten.intrinsic.rnd import RandomNetworkDistillation
+
 if TYPE_CHECKING:
     from ..cats import CatsExperiment
 
