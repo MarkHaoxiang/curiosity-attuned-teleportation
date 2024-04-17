@@ -1,5 +1,5 @@
 import gymnasium as gym
-from minigrid.wrappers import FullyObsWrapper, ImgObsWrapper, ReseedWrapper
+from minigrid.wrappers import FullyObsWrapper, ImgObsWrapper, ReseedWrapper, PositionBonus
 
 from kitten.common import util
 
@@ -27,12 +27,13 @@ def build_env(cfg) -> gym.Env:
         #         self.env, noise=self.environment_action_noise
         #     )
     elif cfg.env.name in minigrid:
-        env = gym.make(cfg.env.name)
+        env = util.build_env(**cfg.env)
         # Convert to MDP
         env = FullyObsWrapper(env)
+        #env = RGBImgObsWrapper(env)
         env = ImgObsWrapper(env)
         if cfg.cats.fixed_reset:
-            env = ReseedWrapper(seeds=(cfg.seed,))
+            env = ReseedWrapper(env, seeds=(int(cfg.seed),))
     else:
         raise ValueError("Unknown environment")
     if cfg.cats.reset_action.enable:

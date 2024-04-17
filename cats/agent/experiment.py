@@ -6,6 +6,7 @@ from kitten.nn import HasValue
 from kitten.policy import Policy
 from kitten.common.rng import global_seed
 from kitten.common.typing import Device
+from kitten.logging import DictEngine, KittenLogger
 
 from .env import build_env
 from .cats import *
@@ -17,6 +18,7 @@ class ExperimentBase(ABC):
     def __init__(
         self,
         cfg: DictConfig,
+        normalise_obs: bool = True,
         deprecated_testing_flag: bool = False,
         device: Device = "cpu",
     ) -> None:
@@ -34,7 +36,7 @@ class ExperimentBase(ABC):
         self._build_policy()
         self.intrinsic = build_intrinsic(self.cfg, self.env, self.device)
         self.memory, self.rmv, self.collector = build_data(
-            self.cfg, self.env, self.policy, self.device
+            self.cfg, normalise_obs, self.env, self.policy, self.device
         )
 
         self.trm, self.tm, self.rm, self.ts = build_teleport(
@@ -46,9 +48,17 @@ class ExperimentBase(ABC):
         )
 
         # RMV injection
-        self.rmv.append(self.policy.fn)
-        self.rmv.prepend(self.rm.targets)
-        self.rmv.prepend(self.tm.targets)
+        if normalise_obs:
+            self.rmv.append(self.policy.fn)
+            self.rmv.prepend(self.rm.targets)
+            self.rmv.prepend(self.tm.targets)
+
+        # Logging
+        self._build_logging()
+
+    @abstractmethod
+    def run(self):
+        raise NotImplementedError
 
     @abstractmethod
     def _build_policy(self) -> None:
@@ -63,3 +73,43 @@ class ExperimentBase(ABC):
     @abstractmethod
     def policy(self) -> Policy:
         raise NotImplementedError
+    
+
+    def _reset(self, obs: NDArray[Any], terminate: bool):
+        # Collector actually already resets the policy, so don't need to repeat here
+        self.logger.log(
+            {
+                "reset_terminate": terminate,
+                "reset_step": self.tm.episode_step,
+                "reset_obs": obs,
+            }
+        )
+        if self.cfg.cats.teleport.enable:
+            tid, _, n_obs = self.trm.select(self.collector)
+            self.logger.log(
+                {
+                    "teleport_step": tid,
+                    "teleport_obs": n_obs,
+                }
+            )
+        else:
+            obs = self._reset_env()
+            self.tm.reset(self.collector.env, obs)
+
+    def _reset_env(self):
+        """Manual reset of the environment"""
+        o, _ = self.collector.env.reset()
+        self.collector.obs = o
+        return o
+
+    def _build_logging(self):
+        self.logger = KittenLogger(
+            self.cfg, algorithm="cats", engine=DictEngine, path=self.cfg.log.path
+        )
+        self.logger.register_providers(
+            [
+                (self.intrinsic, "intrinsic"),
+                (self.collector, "collector"),
+                (self.memory, "memory"),
+            ]
+        )

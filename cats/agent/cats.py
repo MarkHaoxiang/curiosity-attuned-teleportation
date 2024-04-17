@@ -86,11 +86,15 @@ def build_teleport(
     return trm, tm, rm, ts
 
 
-def build_data(cfg, env: gym.Env, policy: Policy, device: Device):
+def build_data(cfg,
+               normalise_obs: bool,
+               env: gym.Env,
+               policy: Policy,
+               device: Device):
     memory, rmv = build_replay_buffer(
         env,
         capacity=cfg.train.total_frames + cfg.train.initial_collection_size,
-        normalise_observation=True,
+        normalise_observation=normalise_obs,
         device=device,
     )
     collector = GymCollector(policy, env, memory, device=device)
@@ -102,6 +106,6 @@ def build_intrinsic(cfg, env: gym.Env, device: Device = "cpu"):
         return util.build_intrinsic(env, cfg.intrinsic, device=device)
     elif cfg.env.name in minigrid:
         assert cfg.intrinsic.type == "rnd", "Not yet implemented"
-        return build_rnd()
+        return build_rnd().to(device=device)
     else:
         raise ValueError("Unknown env name")

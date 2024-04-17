@@ -1,0 +1,41 @@
+defaults:
+  - _self_
+  - intrinsic: rnd
+env:
+  name: MiniGrid-FourRooms-v0
+  max_steps: 100
+cats:
+  fixed_reset: false
+  death_not_end: false
+  reset_action:
+    enable: false
+    penalty: 0.0
+  env_action_noise: 0.0
+  teleport:
+    enable: false
+    type: e_greedy
+    kwargs:
+      e: 0.0
+    memory:
+      type: episode
+      capacity: 1024
+train:
+  total_frames: 4096
+  initial_collection_size: 0
+algorithm:
+  gamma: 0.99
+  lmbda: 0.9
+  collection_batch: 100
+policy:
+  p: 0
+log:
+  name: false
+  checkpoint:
+    enable: false
+  evaluation:
+    video:
+      enable: false
+      path:
+  frames_per_epoch: 100
+  path: log
+seed: 0

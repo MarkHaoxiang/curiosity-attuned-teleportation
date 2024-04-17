@@ -1,9 +1,9 @@
 from torch import nn, Tensor
-from kitten.nn import Value
+from kitten.nn import Value, HasValue
 
 
 # Define Value Module, Transformations, Policy
-class MinigridValue(Value):
+class MinigridValue(Value, HasValue):
 
     def __init__(self) -> None:
         super().__init__()
@@ -11,11 +11,11 @@ class MinigridValue(Value):
         # With ReLu changed to LeakyReLu
 
         self.cnn = nn.Sequential(
-            nn.Conv2d(3, 16, (2, 2)),
+            nn.Conv2d(3, 8, (2, 2)),
+            nn.LeakyReLU(),
+            nn.Conv2d(8, 16, (2, 2)),
             nn.LeakyReLU(),
             nn.Conv2d(16, 32, (2, 2)),
-            nn.LeakyReLU(),
-            nn.Conv2d(32, 64, (2, 2)),
             nn.LeakyReLU(),
             nn.Flatten(),
         )

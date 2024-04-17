@@ -7,7 +7,7 @@ from omegaconf import DictConfig
 
 # Kitten
 from kitten.common.util import *
-from cats.cats import CatsExperiment
+from cats.offline_experiment import CatsExperiment
 from cats.evaluation import *
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -24,7 +24,7 @@ def run(cfg: DictConfig, save: bool = True):
     return experiment
 
 
-@hydra.main(version_base=None, config_path="./config", config_name="defaults")
+@hydra.main(version_base=None, config_path="./config", config_name="defaults_offline")
 def main(cfg: DictConfig):
     path = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
     cfg.log.path = path

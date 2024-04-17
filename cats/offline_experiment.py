@@ -1,7 +1,3 @@
-# Std
-import copy
-
-
 # Training
 import torch
 from tqdm import tqdm
@@ -9,7 +5,6 @@ from omegaconf import DictConfig
 
 # Kitten
 from kitten.experience.util import (
-    build_replay_buffer,
     build_transition_from_list,
 )
 from kitten.experience.collector import GymCollector
@@ -39,7 +34,7 @@ class CatsExperiment(ExperimentBase):
         deprecated_testing_flag: bool = False,
         device: Device = "cpu",
     ):
-        super().__init__(cfg, deprecated_testing_flag, device)
+        super().__init__(cfg, True, deprecated_testing_flag, device)
         # Parameters
         self.teleport_cfg = self.cfg.cats.teleport
         self.fixed_reset = self.cfg.cats.fixed_reset
@@ -50,13 +45,13 @@ class CatsExperiment(ExperimentBase):
         self.logging_path = self.cfg.log.path
 
         # Init
-        self._build_logging()
+        self.logger.register_provider(self.algorithm, "train")
 
     def run(self):
         """Default Experiment run"""
         # Initialisation
         self.early_start(self.cfg.train.initial_collection_size)
-        self.reset_env()
+        self._reset_env()
         self.tm.reset(self.collector.env, self.collector.obs)
 
         # Main Loop
@@ -145,7 +140,7 @@ class CatsExperiment(ExperimentBase):
         Args:
             n (int): number of steps
         """
-        self.reset_env()
+        self._reset_env()
         policy = self.collector.policy
         if not self.reset_as_an_action.enable:
             self.collector.set_policy(Policy(lambda _: self.env.action_space.sample()))
@@ -165,27 +160,6 @@ class CatsExperiment(ExperimentBase):
             batch.s_1
         )
         self.intrinsic.initialise(batch)
-
-    def _reset(self, obs, terminate):
-        # Collector actually already resets the policy, so don't need to repeat here
-        self.logger.log(
-            {
-                "reset_terminate": terminate,
-                "reset_step": self.tm.episode_step,
-                "reset_obs": obs,
-            }
-        )
-        if self.teleport_cfg.enable:
-            tid, _, n_obs = self.trm.select(self.collector)
-            self.logger.log(
-                {
-                    "teleport_step": tid,
-                    "teleport_obs": n_obs,
-                }
-            )
-        else:
-            obs = self.reset_env()
-            self.tm.reset(self.collector.env, obs)
 
     def _build_policy(self):
         self.algorithm = QTOptCats(
@@ -221,23 +195,9 @@ class CatsExperiment(ExperimentBase):
     def value_container(self):
         return self.algorithm
 
-    def _build_logging(self):
-        self.logger = KittenLogger(
-            self.cfg, algorithm="cats", engine=DictEngine, path=self.logging_path
-        )
-        self.logger.register_providers(
-            [
-                (self.algorithm, "train"),
-                (self.intrinsic, "intrinsic"),
-                (self.collector, "collector"),
-                (self.memory, "memory"),
-            ]
-        )
-
-    def reset_env(self):
+    def _reset_env(self):
         """Manual reset of the environment"""
+        o = super().__init__()
         if self.enable_policy_sampling:
             self.algorithm.reset_critic()
-        o, _ = self.collector.env.reset()
-        self.collector.obs = o
         return o

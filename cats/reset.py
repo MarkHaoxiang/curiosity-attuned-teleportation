@@ -48,7 +48,7 @@ class ResetMemory:
 
     def select(self, tid: int, collector: GymCollector) -> tuple[gym.Env, NDArray[Any]]:
         obs = (
-            self.reset_target_observations._fetch_storage(indices=tid)[0].cpu().numpy()
+            self.reset_target_observations.fetch_storage(indices=tid)[0].cpu().numpy()
         )
         env = copy.deepcopy(self.reset_envs[tid])
         collector.env, collector.obs = env, obs
