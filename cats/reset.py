@@ -101,17 +101,26 @@ class ResetActionWrapper(gym.Wrapper, gym.utils.RecordConstructorArgs):
         self._previous_obs = observation
         return observation, reward, terminated, truncated, info
 
-    def step(self, action: Any):
+    def should_truncate(self, action: Any):
         if isinstance(self.action_space, gym.spaces.Box):
             if self._deterministic:
                 manual_truncation = action[-1] > 0.5
             else:
                 manual_truncation = self.np_random.random() > action[-1]
+        elif isinstance(self.action_space, gym.spaces.Discrete):
+            manual_truncation = action == self.action_space.start + self.action_space.n - 1
+        else:
+            raise NotImplementedError()
+        return manual_truncation
+
+    def step(self, action: Any):
+        manual_truncation = self.should_truncate(action)
+        if isinstance(self.action_space, gym.spaces.Box):
             obs, r, d, t, i = self._env_step(action[:-1])
             r = r - self._penalty if manual_truncation else r
             return obs, r, d, t or manual_truncation, i
         elif isinstance(self.action_space, gym.spaces.Discrete):
-            if action == self.action_space.start + self.action_space.n - 1:
+            if manual_truncation:
                 return self._previous_obs, -self._penalty, False, True, {}
             else:
                 return self._env_step(action)

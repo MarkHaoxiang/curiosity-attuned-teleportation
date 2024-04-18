@@ -37,5 +37,5 @@ def build_env(cfg) -> gym.Env:
     else:
         raise ValueError("Unknown environment")
     if cfg.cats.reset_action.enable:
-        env = ResetActionWrapper(env, penalty=cfg.cats.reset_action.penalty)
+        env = ResetActionWrapper(env, penalty=cfg.cats.reset_action.penalty, deterministic=True)
     return env

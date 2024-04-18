@@ -23,6 +23,7 @@ from .logging import *
 from .evaluation import *
 
 from .agent.experiment import ExperimentBase, TeleportationResetModule
+from .agent.classic_control import ClassicalResetCritic
 
 
 class CatsExperiment(ExperimentBase):
@@ -46,6 +47,7 @@ class CatsExperiment(ExperimentBase):
 
         # Init
         self.logger.register_provider(self.algorithm, "train")
+        self.collected_intrinsic_reward = 0
 
     def run(self):
         """Default Experiment run"""
@@ -57,7 +59,15 @@ class CatsExperiment(ExperimentBase):
         # Main Loop
         for step in tqdm(range(1, self.cfg.train.total_frames + 1)):
             # Collect Data
-            s_0_c, a_c, r_c, s_1_c, d_c, t_c = self.collector.collect(n=1)[-1]
+            collected = self.collector.collect(n=1)
+            s_0_c, a_c, r_c, s_1_c, d_c, t_c = collected[-1]
+
+            # Newly collected
+            c_batch = build_transition_from_list(collected, device=self.device)
+            c_batch.s_0 = self.rmv.transform(c_batch.s_0)
+            c_batch.s_1 = self.rmv.transform(c_batch.s_1)
+            self.collected_intrinsic_reward += self.intrinsic.reward(c_batch)[2].sum().item()
+
             self.rmv.add_tensor_batch(
                 torch.tensor(s_1_c, device=self.device).unsqueeze(0)
             )
@@ -126,6 +136,7 @@ class CatsExperiment(ExperimentBase):
                 log = {}
                 if self.death_is_not_the_end or self.reset_as_an_action:
                     log["reset_value"] = self.reset_value
+                log["collected_intrinsic_reward"] = self.collected_intrinsic_reward
                 # if isinstance(self.intrinsic, RandomNetworkDistillation):
                 #     log["evaluate/intrinsic"] = evaluate_rnd(self)
                 # log["evaluate/entropy"] = entropy_memory(self.memory.rb)
@@ -162,10 +173,15 @@ class CatsExperiment(ExperimentBase):
         self.intrinsic.initialise(batch)
 
     def _build_policy(self):
+        def build_critic_():
+            if isinstance(self.env, ResetActionWrapper) and isinstance(self.env.action_space, Box):
+                critic = ClassicalResetCritic(self.env, **self.cfg.algorithm.critic)
+            else:
+                critic = build_critic(self.env, **self.cfg.algorithm.critic)
+            critic = critic.to(self.device)
+            return critic
         self.algorithm = QTOptCats(
-            build_critic=lambda: build_critic(self.env, **self.cfg.algorithm.critic).to(
-                device=self.device
-            ),
+            build_critic=build_critic_,
             action_space=self.env.action_space,
             obs_space=self.env.observation_space,
             rng=self.rng.build_generator(),
@@ -197,7 +213,7 @@ class CatsExperiment(ExperimentBase):
 
     def _reset_env(self):
         """Manual reset of the environment"""
-        o = super().__init__()
+        o = super()._reset_env()
         if self.enable_policy_sampling:
             self.algorithm.reset_critic()
         return o

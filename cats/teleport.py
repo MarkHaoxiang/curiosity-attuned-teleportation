@@ -51,7 +51,7 @@ class EpsilonGreedyTeleport(TeleportStrategy):
 
 class BoltzmannTeleport(TeleportStrategy):
     def __init__(
-        self, algorithm: HasValue, rng: Generator | None = None, alpha: float = 0.1
+        self, algorithm: HasValue, rng: Generator | None = None, alpha: float = 1
     ) -> None:
         super().__init__(algorithm=algorithm)
         self._a = alpha
