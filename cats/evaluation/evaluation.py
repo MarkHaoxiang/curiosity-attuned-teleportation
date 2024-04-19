@@ -17,7 +17,7 @@ from kitten.experience.memory import ReplayBuffer
 from kitten.experience import Transitions
 
 if TYPE_CHECKING:
-    from ..cats import CatsExperiment
+    from ..agent.experiment import ExperimentBase
 
 
 def entropy_memory(memory: ReplayBuffer) -> float:
@@ -29,7 +29,7 @@ def entropy_memory(memory: ReplayBuffer) -> float:
 
 
 def visualise_state_targets(
-    experiment: CatsExperiment, fig: Figure, ax: Axes, key: str, title: str
+    experiment: ExperimentBase, fig: Figure, ax: Axes, key: str, title: str
 ):
     env = experiment.env
 
@@ -60,7 +60,7 @@ def visualise_state_targets(
 
 def inverse_to_env(env: gym.Env, s):
     match env.spec.id:
-        case "MountainCarContinuous-v0":
+        case w if w in ["MountainCarContinuous-v0", "MountainCar-v0"]:
             return s
         case "Pendulum-v1":
             return np.stack((np.cos(s[:, 0]), np.sin(s[:, 0]), s[:, 1]), axis=1)
@@ -70,7 +70,7 @@ def inverse_to_env(env: gym.Env, s):
 
 def env_to_2d(env: gym.Env, s):
     match env.spec.id:
-        case "MountainCarContinuous-v0":
+        case w if w in  ["MountainCarContinuous-v0", "MountainCar-v0"]:
             return (
                 s if s is not None else None,
                 (
@@ -102,7 +102,7 @@ def env_to_2d(env: gym.Env, s):
             raise ValueError("Environment not yet supported")
 
 
-def visualise_memory(experiment: CatsExperiment, fig: Figure, ax: Axes):
+def visualise_memory(experiment: ExperimentBase, fig: Figure, ax: Axes):
     """Visualise state space for given environments"""
 
     env = experiment.env
@@ -127,7 +127,7 @@ def visualise_memory(experiment: CatsExperiment, fig: Figure, ax: Axes):
     fig.colorbar(m, ax=ax)
 
 
-def generate_2d_grid(experiment: CatsExperiment):
+def generate_2d_grid(experiment: ExperimentBase):
     _, (x_label, x_low, x_high), (y_label, y_low, y_high) = env_to_2d(
         experiment.env, None
     )
@@ -146,18 +146,19 @@ def generate_2d_grid(experiment: CatsExperiment):
     states = torch.stack((grid_X.flatten(), grid_Y.flatten())).T
     # Observation Normalisation
     s = torch.tensor(inverse_to_env(experiment.env, states), device=experiment.device)
-    s = experiment.rmv.transform(s)
+    if experiment.rmv is not None:
+        s = experiment.rmv.transform(s)
     return s, states, x_label, y_label
 
 
 def visualise_experiment_value_estimate(
-    experiment: CatsExperiment,
+    experiment: ExperimentBase,
     fig: Figure,
     ax: Axes,
 ):
     s, states, x_label, y_label = generate_2d_grid(experiment)
     # V
-    values = experiment.algorithm.value.v(s)
+    values = experiment.value_container.value.v(s)
     norm = mpl.colors.Normalize(vmin=values.min(), vmax=values.max())
     cmap = cm.viridis
     m = cm.ScalarMappable(norm=norm, cmap=cmap)
@@ -169,7 +170,7 @@ def visualise_experiment_value_estimate(
     fig.colorbar(m, ax=ax)
 
 
-def visualise_experiment_policy(experiment: CatsExperiment, fig: Figure, ax: Axes):
+def visualise_experiment_policy(experiment: ExperimentBase, fig: Figure, ax: Axes):
     # Policy
     s, states, x_label, y_label = generate_2d_grid(experiment)
     actions = experiment.algorithm.policy_fn(s)[:, :1]
@@ -185,7 +186,7 @@ def visualise_experiment_policy(experiment: CatsExperiment, fig: Figure, ax: Axe
         fig.colorbar(m, ax=ax)
 
 
-def visualise_reset_policy(experiment: CatsExperiment, fig: Figure, ax: Axes):
+def visualise_reset_policy(experiment: ExperimentBase, fig: Figure, ax: Axes):
     # Policy
     s, states, x_label, y_label = generate_2d_grid(experiment)
     actions = experiment.algorithm.policy_fn(s)[:, -1]
@@ -202,7 +203,7 @@ def visualise_reset_policy(experiment: CatsExperiment, fig: Figure, ax: Axes):
 
 
 def visualise_experiment_value_reset_estimate(
-    experiment: CatsExperiment,
+    experiment: ExperimentBase,
     fig: Figure,
     ax: Axes,
 ):

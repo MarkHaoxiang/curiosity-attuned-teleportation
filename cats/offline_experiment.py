@@ -66,7 +66,7 @@ class CatsExperiment(ExperimentBase):
             c_batch = build_transition_from_list(collected, device=self.device)
             c_batch.s_0 = self.rmv.transform(c_batch.s_0)
             c_batch.s_1 = self.rmv.transform(c_batch.s_1)
-            self.collected_intrinsic_reward += self.intrinsic.reward(c_batch)[2].sum().item()
+            self.collected_intrinsic_reward += self.intrinsic.reward(c_batch, update_normalisation=False)[2].sum().item()
 
             self.rmv.add_tensor_batch(
                 torch.tensor(s_1_c, device=self.device).unsqueeze(0)

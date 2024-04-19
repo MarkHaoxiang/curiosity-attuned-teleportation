@@ -1,14 +1,19 @@
 defaults:
   - _self_
-  - intrinsic: rnd
-
+intrinsic:
+  type: rnd
+  encoding_size: 32
+  lr: 0.0003
+  int_coef: 1
+  ext_coef: 2
+  reward_normalisation: true
+  normalised_obs_clip: 5
 env:
-  name: MountainCarContinuous-v0
+  name: MountainCar-v0
   max_episode_steps: 100
 cats:
-  fixed_reset: false
-  death_not_end: true
-  enable_policy_sampling: true
+  fixed_reset: true
+  death_not_end: false
   reset_action:
     enable: false
     penalty: 0.0
@@ -19,27 +24,19 @@ cats:
     kwargs:
       e: 0.1
     memory:
-      type: episode
+      type: fifo
       capacity: 1024
 train:
-  initial_collection_size: 256
   total_frames: 4096
-  minibatch_size: 128
+  initial_collection_size: 0
 algorithm:
-  type: qt_opt
-  gamma: 0.9
-  tau: 0.005
-  lr: 0.01
-  update_frequency: 1
-  clip_grad_norm: 1
-  ensemble_number: 5
-  actor:
-    features: 128
-  critic:
-    features: 128
-noise:
-  scale: 0.1
-  beta: 0
+  gamma: 0.99
+  lmbda: 0.9
+  n_update_epochs: 4
+  minibatch_size: 32
+  collection_batch: 100
+policy:
+  p: 0
 log:
   name: false
   checkpoint:

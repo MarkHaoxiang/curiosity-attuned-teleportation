@@ -8,18 +8,19 @@ import torch
 from kitten.intrinsic.rnd import RandomNetworkDistillation
 
 if TYPE_CHECKING:
-    from ..cats import CatsExperiment
+    from ..agent.experiment import ExperimentBase
 
 
 # Aims to evaluate which trained intrinsic model is the best
-def evaluate_rnd(experiment: CatsExperiment, samples: int = 10000) -> float:
+def evaluate_rnd(experiment: ExperimentBase, samples: int = 10000) -> float:
     env = experiment.env
     device = experiment.device
     env.observation_space.seed(0)
     s = torch.tensor(
         np.array([env.observation_space.sample() for _ in range(samples)])
     ).to(device=device)
-    s = experiment.rmv.transform(s)
+    if experiment.rmv is not None:
+        s = experiment.rmv.transform(s)
     rnd = experiment.intrinsic
     assert isinstance(rnd, RandomNetworkDistillation)
     return rnd.forward(s).mean().item()

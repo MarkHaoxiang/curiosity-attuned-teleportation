@@ -1,6 +1,13 @@
 defaults:
   - _self_
-  - intrinsic: rnd
+intrinsic:
+  type: rnd
+  encoding_size: 32
+  lr: 0.0003
+  int_coef: 1
+  ext_coef: 2
+  reward_normalisation: false
+  normalised_obs_clip: 5
 env:
   name: MiniGrid-FourRooms-v0
   max_steps: 100
@@ -25,6 +32,8 @@ train:
 algorithm:
   gamma: 0.99
   lmbda: 0.9
+  n_update_epochs: 4
+  minibatch_size: 32
   collection_batch: 100
 policy:
   p: 0

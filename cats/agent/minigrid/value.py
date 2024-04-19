@@ -1,5 +1,8 @@
+import torch
 from torch import nn, Tensor
 from kitten.nn import Value, HasValue
+
+from .common import one_hot_encoding
 
 
 # Define Value Module, Transformations, Policy
@@ -10,12 +13,10 @@ class MinigridValue(Value, HasValue):
         # We use the CNN from https://minigrid.farama.org/content/training/
         # With ReLu changed to LeakyReLu
 
-        self.cnn = nn.Sequential(
-            nn.Conv2d(3, 8, (2, 2)),
+        self.conv = nn.Sequential(
+            nn.Conv2d(4, 8, (2, 2)),
             nn.LeakyReLU(),
             nn.Conv2d(8, 16, (2, 2)),
-            nn.LeakyReLU(),
-            nn.Conv2d(16, 32, (2, 2)),
             nn.LeakyReLU(),
             nn.Flatten(),
         )
@@ -24,13 +25,13 @@ class MinigridValue(Value, HasValue):
         self.linear = nn.Sequential(
             nn.LazyLinear(128),
             nn.LeakyReLU(),
-            nn.LazyLinear(128),
-            nn.LeakyReLU(),
             nn.LazyLinear(1),
         )
 
     def forward(self, x) -> Tensor:
-        return self.linear(self.cnn(x))
+        image, direction = one_hot_encoding(x)
+        lin_in = torch.cat((self.conv(image), direction), dim=1)
+        return self.linear(lin_in)
 
     @property
     def value(self) -> Value:
