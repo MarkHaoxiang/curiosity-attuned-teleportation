@@ -137,9 +137,9 @@ class CatsExperiment(ExperimentBase):
                 if self.death_is_not_the_end or self.reset_as_an_action:
                     log["reset_value"] = self.reset_value
                 log["collected_intrinsic_reward"] = self.collected_intrinsic_reward
-                # if isinstance(self.intrinsic, RandomNetworkDistillation):
-                #     log["evaluate/intrinsic"] = evaluate_rnd(self)
-                # log["evaluate/entropy"] = entropy_memory(self.memory.rb)
+                if isinstance(self.intrinsic, RandomNetworkDistillation):
+                    log["evaluate/intrinsic"] = evaluate_rnd(self)
+                log["evaluate/entropy"] = entropy_memory(self.memory.rb)
                 self.logger.log(log)
 
         # Store output
