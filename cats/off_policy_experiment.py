@@ -7,12 +7,13 @@ from omegaconf import DictConfig
 from kitten.experience.util import (
     build_transition_from_list,
 )
-from kitten.experience.collector import GymCollector
 from kitten.policy import ColoredNoisePolicy, Policy
 from kitten.common import *
 from kitten.common.typing import Device
 from kitten.common.util import *
-from kitten.logging import DictEngine, KittenLogger
+
+from kitten.rl.ddpg import DeepDeterministicPolicyGradient
+from kitten.rl.td3 import TwinDelayedDeepDeterministicPolicyGradient
 
 # Cats
 from .rl import QTOptCats, ResetValueOverloadAux
@@ -121,7 +122,7 @@ class CatsExperiment(ExperimentBase):
                 aux.reset_value_mixin_enable = True
                 # Since we don't consider extrinsic rewards (for now)
                 # Manually add the penalty to intrinsic rewards
-                if self.reset_as_an_action:
+                if self.reset_as_an_action.enable:
                     r_i = r_i
 
             if self.death_is_not_the_end:
@@ -134,11 +135,11 @@ class CatsExperiment(ExperimentBase):
             if step % self.cfg.log.frames_per_epoch == 0:
                 self.logger.epoch()
                 log = {}
-                if self.death_is_not_the_end or self.reset_as_an_action:
+                if self.death_is_not_the_end or self.reset_as_an_action.enable:
                     log["reset_value"] = self.reset_value
-                log["collected_intrinsic_reward"] = self.collected_intrinsic_reward
-                if isinstance(self.intrinsic, RandomNetworkDistillation):
-                    log["evaluate/intrinsic"] = evaluate_rnd(self)
+                # log["collected_intrinsic_reward"] = self.collected_intrinsic_reward
+                # if isinstance(self.intrinsic, RandomNetworkDistillation):
+                #     log["evaluate/intrinsic"] = evaluate_rnd(self)
                 log["evaluate/entropy"] = entropy_memory(self.memory.rb)
                 self.logger.log(log)
 
@@ -180,14 +181,44 @@ class CatsExperiment(ExperimentBase):
                 critic = build_critic(self.env, **self.cfg.algorithm.critic)
             critic = critic.to(self.device)
             return critic
-        self.algorithm = QTOptCats(
-            build_critic=build_critic_,
-            action_space=self.env.action_space,
-            obs_space=self.env.observation_space,
-            rng=self.rng.build_generator(),
-            device=self.device,
-            **self.cfg.algorithm,
-        )
+        match self.cfg.algorithm.type:
+            case "qt_opt":
+                self.algorithm = QTOptCats(
+                build_critic=build_critic_,
+                action_space=self.env.action_space,
+                obs_space=self.env.observation_space,
+                rng=self.rng.build_generator(),
+                device=self.device,
+                **self.cfg.algorithm,
+            )
+            case "ddpg":
+                self.algorithm = DeepDeterministicPolicyGradient(
+                    actor_network=build_actor(self.env, **self.cfg.algorithm.actor),
+                    critic_network=build_critic_(),
+                    device=self.device,
+                    **self.cfg.algorithm
+                )
+            case "td3":
+                env_action_scale = (
+                torch.tensor(self.env.action_space.high - self.env.action_space.low, device=self.device)
+                    / 2.0
+                )
+                env_action_min = torch.tensor(
+                    self.env.action_space.low, dtype=torch.float32, device=self.device
+                )
+                env_action_max = torch.tensor(
+                    self.env.action_space.high, dtype=torch.float32, device=self.device
+                )
+                self.algorithm = TwinDelayedDeepDeterministicPolicyGradient(
+                    actor_network=build_actor(self.env,  **self.cfg.algorithm.actor),
+                    critic_1_network=build_critic_(),
+                    critic_2_network=build_critic_(),
+                    env_action_min=env_action_min,
+                    env_action_max=env_action_max,
+                    env_action_scale=env_action_scale
+                )
+            case _:
+                raise ValueError("Unknown agent algorithm")
         self._policy = ColoredNoisePolicy(
             self.algorithm.policy_fn,
             self.env.action_space,

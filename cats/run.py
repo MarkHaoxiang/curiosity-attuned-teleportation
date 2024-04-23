@@ -7,7 +7,7 @@ from omegaconf import DictConfig
 
 # Kitten
 from kitten.common.util import *
-from cats.offline_experiment import CatsExperiment
+from cats.off_policy_experiment import CatsExperiment
 from cats.evaluation import *
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
