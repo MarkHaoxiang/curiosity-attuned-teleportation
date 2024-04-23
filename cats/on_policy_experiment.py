@@ -6,7 +6,7 @@ import torch
 from kitten.rl.common import generate_minibatches, td_lambda
 from kitten.experience import AuxiliaryMemoryData, Transitions
 from kitten.experience.util import build_transition_from_list
-from kitten.nn import Value
+from kitten.nn import Value, Ensemble
 
 from cats.agent.experiment import ExperimentBase
 
@@ -27,26 +27,56 @@ class OnlineExperiment(ExperimentBase, ABC):
         self._lmbda: float = cfg.algorithm.lmbda
         self._mb_size: int = cfg.algorithm.minibatch_size
         self._n_update_epochs: int = cfg.algorithm.n_update_epochs
-
     def _build_policy(self) -> None:
-        self.value = self._build_value()
-        self.optim_v = torch.optim.Adam(params=self.value.parameters()) 
+        self._ucb_enabled = self.cfg.cats.teleport.enable and self.cfg.cats.teleport.type == "ucb"
+        if self._ucb_enabled:
+            self._value = Ensemble(self._build_value, n=5, rng=self.rng.build_generator())
+        else:
+            self._value = self._build_value()
+        self.optim_v = torch.optim.Adam(params=self._value.parameters()) 
     
     @property
     def value_container(self):
         return self
+
+    def mu_var(self, s):
+        assert self._ucb_enabled
+        with torch.no_grad():
+            return self._value.mu_var(s)
+
+    @property
+    def value(self):
+        if isinstance(self._value, Ensemble):
+            return self._value.sample_network()
+        else:
+            return self._value
 
     @abstractmethod
     def _build_value(self) -> Value:
         raise NotImplementedError
 
     def value_update(self, batch: Transitions) -> float:
-        value_targets = td_lambda(batch, self._lmbda, self._gamma, self.value)
+        if not self._ucb_enabled:
+            value = [self._value]
+        else:
+            value = self._value
+
+        # Different Bootstrapped Targets
+        value_targets = []
+        for i, v in enumerate(value):
+            value_targets.append(td_lambda(batch, self._lmbda, self._gamma, v))
+        value_targets = torch.stack(value_targets)
+        bit_mask = torch.rand(value_targets.shape, device=self.device) < 0.5
+        value_targets = value_targets * bit_mask
+
         total_value_loss = 0
         for _ in range(self._n_update_epochs):
-            for i, mb in generate_minibatches(value_targets, mb_size=self._mb_size, rng=self.rng):
+            for i, _ in generate_minibatches(value_targets[0], mb_size=self._mb_size, rng=self.rng):
                 self.optim_v.zero_grad()
-                value_loss = ((mb - self.value.v(batch.s_0[i])) ** 2).mean()
+                value_loss = 0
+                for j, v in enumerate(value):
+                    pred_value = bit_mask[j][i] * v(batch.s_0[i]).squeeze()
+                    value_loss += ((value_targets[j][i] - pred_value) ** 2).mean()
                 total_value_loss += value_loss.item()
                 value_loss.backward()
                 self.optim_v.step()
@@ -56,10 +86,7 @@ class OnlineExperiment(ExperimentBase, ABC):
         pass
 
     def run(self):
-        if self.cfg.cats.teleport.enable:
-            self.tm.reset(self.collector.env, self.collector.obs)
-        else:
-            self._reset_env()
+        self.tm.reset(self.collector.env, self.collector.obs)
         step, steps = 0, self.cfg.train.total_frames
         while step < steps:
             # Collect batch
