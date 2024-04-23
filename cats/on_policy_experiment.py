@@ -21,7 +21,7 @@ class OnlineExperiment(ExperimentBase, ABC):
     ) -> None:
         super().__init__(cfg,
                          normalise_obs=False,
-                         deprecated_testing_flag=False,
+                         deprecated_testing_flag=deprecated_testing_flag,
                          device=device)
         self._gamma: float = cfg.algorithm.gamma
         self._lmbda: float = cfg.algorithm.lmbda
@@ -56,17 +56,21 @@ class OnlineExperiment(ExperimentBase, ABC):
         pass
 
     def run(self):
-        self.tm.reset(self.collector.env, self.collector.env)
+        if self.cfg.cats.teleport.enable:
+            self.tm.reset(self.collector.env, self.collector.obs)
+        else:
+            self._reset_env()
         step, steps = 0, self.cfg.train.total_frames
         while step < steps:
             # Collect batch
             batch_ = []
-            goal_step = step + 100 # TODO
+            goal_step = step + self.cfg.algorithm.collection_batch
             while step < goal_step:
                 step += 1
                 data = self.collector.collect(n=1)[-1]
                 batch_.append(data)
-                self.tm.update(self.collector.env, obs=data[0])
+                if self.cfg.cats.teleport.enable:
+                    self.tm.update(self.collector.env, obs=data[0])
                 if data[-2] or data[-1]: # Terminated or truncated
                     break
             batch = build_transition_from_list(batch_, device=self.device)

@@ -140,7 +140,7 @@ class CatsExperiment(ExperimentBase):
                 # log["collected_intrinsic_reward"] = self.collected_intrinsic_reward
                 # if isinstance(self.intrinsic, RandomNetworkDistillation):
                 #     log["evaluate/intrinsic"] = evaluate_rnd(self)
-                log["evaluate/entropy"] = entropy_memory(self.memory.rb)
+                # log["evaluate/entropy"] = entropy_memory(self.memory.rb)
                 self.logger.log(log)
 
         # Store output

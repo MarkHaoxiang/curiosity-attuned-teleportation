@@ -54,7 +54,7 @@ def visualise_state_targets(
         ax.scatter(x, y, s=2, color=colors[i])
     ax.set_title(title)
 
-    fig.colorbar(m, ax=ax)
+    cbar = fig.colorbar(m, ax=ax)
     return fig, ax
 
 
@@ -124,7 +124,8 @@ def visualise_memory(experiment: ExperimentBase, fig: Figure, ax: Axes):
     colors = m.to_rgba(np.linspace(0, len(s) - 1, len(s)))
     ax.scatter(s[:, 0], s[:, 1], s=1, c=colors)
 
-    fig.colorbar(m, ax=ax)
+    cbar = fig.colorbar(m, ax=ax)
+    cbar.set_label("Training Step #", rotation=270, labelpad=15)
 
 
 def generate_2d_grid(experiment: ExperimentBase):
@@ -167,7 +168,9 @@ def visualise_experiment_value_estimate(
     ax.scatter(states[:, 0], states[:, 1], c=colors)
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
-    fig.colorbar(m, ax=ax)
+
+    cbar = fig.colorbar(m, ax=ax)
+    cbar.set_label("Value", rotation=270, labelpad=15)
 
 
 def visualise_experiment_policy(experiment: ExperimentBase, fig: Figure, ax: Axes):
@@ -183,7 +186,9 @@ def visualise_experiment_policy(experiment: ExperimentBase, fig: Figure, ax: Axe
         ax.set_title("Policy Actions")
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
-        fig.colorbar(m, ax=ax)
+        cbar = fig.colorbar(m, ax=ax)
+        cbar.set_label("Action", rotation=270, labelpad=15)
+
 
 
 def visualise_reset_policy(experiment: ExperimentBase, fig: Figure, ax: Axes):

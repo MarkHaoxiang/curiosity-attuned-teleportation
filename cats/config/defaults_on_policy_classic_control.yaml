@@ -1,13 +1,6 @@
 defaults:
   - _self_
-intrinsic:
-  type: rnd
-  encoding_size: 32
-  lr: 0.0003
-  int_coef: 1
-  ext_coef: 2
-  reward_normalisation: true
-  normalised_obs_clip: 5
+  - intrinsic: rnd
 env:
   name: MountainCar-v0
   max_episode_steps: 100
