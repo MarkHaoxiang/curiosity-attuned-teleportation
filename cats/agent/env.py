@@ -10,7 +10,7 @@ from cats.env import (
 from cats.reset import ResetActionWrapper
 
 # Offline, continuous,
-classic_control = ["MountainCarContinuous-v0", "Pendulum-v1", "MountainCar-v0"]
+classic_control = ["MountainCarContinuous-v0", "Pendulum-v1", "MountainCar-v0", "CartPole-v1", "Acrobot-v1"]
 
 # Minigrid
 minigrid = ["MiniGrid-FourRooms-v0"]
