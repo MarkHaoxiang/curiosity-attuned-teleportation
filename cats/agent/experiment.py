@@ -49,9 +49,9 @@ class ExperimentBase(ABC):
 
         # RMV injection
         if normalise_obs:
-            self.rmv.append(self.policy.fn)
-            self.rmv.prepend(self.rm.targets)
-            self.rmv.prepend(self.tm.targets)
+            self.policy.transform_pre = self.rmv
+            self.rm.transform = self.rmv
+            self.tm.transform = self.rmv
 
         # Logging
         self._build_logging()

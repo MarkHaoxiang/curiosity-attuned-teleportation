@@ -102,7 +102,7 @@ def env_to_2d(env: gym.Env, s):
             raise ValueError("Environment not yet supported")
 
 
-def visualise_memory(experiment: ExperimentBase, fig: Figure, ax: Axes):
+def visualise_memory(experiment: ExperimentBase, fig: Figure, ax: Axes, cbar: bool = True):
     """Visualise state space for given environments"""
 
     env = experiment.env
@@ -124,8 +124,9 @@ def visualise_memory(experiment: ExperimentBase, fig: Figure, ax: Axes):
     colors = m.to_rgba(np.linspace(0, len(s) - 1, len(s)))
     ax.scatter(s[:, 0], s[:, 1], s=1, c=colors)
 
-    cbar = fig.colorbar(m, ax=ax)
-    cbar.set_label("Training Step #", rotation=270, labelpad=15)
+    if cbar:
+        cbar = fig.colorbar(m, ax=ax)
+        cbar.set_label("Training Step #", rotation=270, labelpad=15)
 
 
 def generate_2d_grid(experiment: ExperimentBase):
@@ -156,6 +157,7 @@ def visualise_experiment_value_estimate(
     experiment: ExperimentBase,
     fig: Figure,
     ax: Axes,
+    cbar: bool = True
 ):
     s, states, x_label, y_label = generate_2d_grid(experiment)
     # V
@@ -169,8 +171,9 @@ def visualise_experiment_value_estimate(
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
 
-    cbar = fig.colorbar(m, ax=ax)
-    cbar.set_label("Value", rotation=270, labelpad=15)
+    if cbar:
+        cbar = fig.colorbar(m, ax=ax)
+        cbar.set_label("Value", rotation=270, labelpad=15)
 
 
 def visualise_experiment_policy(experiment: ExperimentBase, fig: Figure, ax: Axes):

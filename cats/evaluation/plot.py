@@ -75,15 +75,18 @@ def visualise_classic_control_results(experiment):
     )
 
     ax = axs[row][1]
-    colors = ["red" if x else "blue" for x in log["reset_terminate"]]
-    x = range(len(log["reset_step"]))
-    ax.scatter(x, log["reset_step"], color=colors, s=5)
-    ax.set_title("Reset Step in Episode")
-    ax.set_xlabel("Occurence")
-    ax.set_ylabel("Step From Episode Reset")
-    if experiment.cfg.cats.teleport.enable:
-        ax.set_title("Reset / Teleport Step in Episode")
-        ax.scatter(range(len(log["teleport_step"])), log["teleport_step"], s=5)
+    if "reset_terminate" in log:
+        colors = ["red" if x else "blue" for x in log["reset_terminate"]]
+        x = range(len(log["reset_step"]))
+        ax.scatter(x, log["reset_step"], color=colors, s=5)
+        ax.set_title("Reset Step in Episode")
+        ax.set_xlabel("Occurence")
+        ax.set_ylabel("Step From Episode Reset")
+        if experiment.cfg.cats.teleport.enable:
+            ax.set_title("Reset / Teleport Step in Episode")
+            ax.scatter(range(len(log["teleport_step"])), log["teleport_step"], s=5)
+    else:
+        ax.axis("off")
         
 
     if experiment.cfg.cats.reset_action.enable:
@@ -114,6 +117,8 @@ def visualise_classic_control_results(experiment):
     print(f"Entropy: {entropy_memory(experiment.memory.rb)}")
     if isinstance(experiment.intrinsic, RandomNetworkDistillation):
         print(f"RND: {evaluate_rnd(experiment)}")
+    elif isinstance(experiment.intrinsic, Disagreement):
+        print(f"Disagreement {evaluate_disagreement(experiment)}")
 
     axs[row][2].axis("off")
     axs[row][3].axis("off")

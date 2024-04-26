@@ -7,6 +7,8 @@ import numpy as np
 from numpy.typing import NDArray
 import torch
 import gymnasium as gym
+
+from kitten.dataflow.interface import Transform, identity
 from kitten.common.rng import Generator
 from kitten.common.typing import Device
 from kitten.logging import log
@@ -88,6 +90,7 @@ class TeleportMemory(ABC):
         super().__init__()
         self.rng = rng
         self._state: gym.Env[Any, Any] | None = None
+        self.transform: Transform = identity
 
     @property
     def state(self) -> gym.Env[Any, Any]:
@@ -113,8 +116,11 @@ class TeleportMemory(ABC):
         """Environment reset"""
         pass
 
-    @abstractmethod
     def targets(self):
+        return self.transform.transform(self._targets())
+
+    @abstractmethod
+    def _targets(self):
         """List of potential teleportation targets"""
         raise NotImplementedError
 
@@ -142,7 +148,7 @@ class LatestEpisodeTeleportMemory(TeleportMemory):
         self.state = copy.deepcopy(env)
         self.episode_step += 1
 
-    def targets(self):
+    def _targets(self):
         return torch.tensor(
             self.teleport_target_observations[: self.episode_step],
             dtype=torch.float32,
@@ -197,7 +203,7 @@ class FIFOTeleportMemory(TeleportMemory):
         self.teleport_target_observations.append((obs, self.episode_step))
         self.episode_step += 1
 
-    def targets(self):
+    def _targets(self):
         return self.teleport_target_observations.storage[0][
             : len(self.teleport_target_observations)
         ]

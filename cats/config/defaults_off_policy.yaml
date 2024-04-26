@@ -4,11 +4,13 @@ defaults:
 
 env:
   name: MountainCarContinuous-v0
-  max_episode_steps: 100
+  max_episode_steps: 1000
 cats:
   fixed_reset: false
-  death_not_end: true
-  enable_policy_sampling: true
+  teleport_interval_enable: false
+  teleport_interval: 100
+  death_not_end: false
+  enable_policy_sampling: false
   reset_action:
     enable: false
     penalty: 0.0

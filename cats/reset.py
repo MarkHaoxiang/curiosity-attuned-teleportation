@@ -7,6 +7,7 @@ from numpy.typing import NDArray
 import torch
 from torch import Tensor
 
+from kitten.dataflow.interface import Transform, identity
 from kitten.policy import Policy
 from kitten.experience.memory import ReplayBuffer
 from kitten.common.typing import Device
@@ -34,6 +35,7 @@ class ResetMemory:
         )
         self.reset_envs = [None for _ in range(self.capacity)]
         self.refresh()
+        self.transform: Transform = identity
 
     def refresh(self) -> None:
         assert self.reset_target_observations._append_index == 0
@@ -44,6 +46,9 @@ class ResetMemory:
             self.reset_envs.append(copy.deepcopy(self.env))
 
     def targets(self):
+        return self.transform.transform(self._targets())
+
+    def _targets(self):
         return self.reset_target_observations.storage[0]
 
     def select(self, tid: int, collector: GymCollector) -> tuple[gym.Env, NDArray[Any]]:

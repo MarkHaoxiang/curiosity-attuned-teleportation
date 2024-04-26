@@ -58,6 +58,7 @@ class CatsExperiment(ExperimentBase):
         self.tm.reset(self.collector.env, self.collector.obs)
 
         # Main Loop
+        last_teleport_time = 0
         for step in tqdm(range(1, self.cfg.train.total_frames + 1)):
             # Collect Data
             collected = self.collector.collect(n=1)
@@ -78,6 +79,11 @@ class CatsExperiment(ExperimentBase):
 
             if d_c or t_c:
                 self._reset(s_1_c, terminate=d_c)
+                last_teleport_time = step
+            elif not self.cfg.cats.reset_action.enable and self.cfg.cats.teleport_interval_enable:
+                if step >= last_teleport_time + self.cfg.cats.teleport_interval:
+                    self._reset(s_1_c, terminate=d_c)
+                    last_teleport_time = step
 
             # Updates
             mb_size = self.cfg.train.minibatch_size
@@ -132,14 +138,13 @@ class CatsExperiment(ExperimentBase):
             self.algorithm.update(batch, aux, step=step)
 
             # Evaluation Epoch
-            if step % self.cfg.log.frames_per_epoch == 0:
+            if step % self.cfg.log.frames_per_epoch == 1:
                 self.logger.epoch()
                 log = {}
                 if self.death_is_not_the_end or self.reset_as_an_action.enable:
                     log["reset_value"] = self.reset_value
-                # log["collected_intrinsic_reward"] = self.collected_intrinsic_reward
-                # if isinstance(self.intrinsic, RandomNetworkDistillation):
-                #     log["evaluate/intrinsic"] = evaluate_rnd(self)
+                log["collected_intrinsic_reward"] = self.collected_intrinsic_reward
+                log["evaluate/intrinsic"] = evaluate_intrinsic(self)
                 # log["evaluate/entropy"] = entropy_memory(self.memory.rb)
                 self.logger.log(log)
 

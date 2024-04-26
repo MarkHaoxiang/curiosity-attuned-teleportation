@@ -1,3 +1,4 @@
+from copy import deepcopy
 from abc import ABC, abstractmethod
 from omegaconf import DictConfig
 
@@ -20,7 +21,7 @@ class OnlineExperiment(ExperimentBase, ABC):
         device: str = "cpu",
     ) -> None:
         super().__init__(cfg,
-                         normalise_obs=False,
+                         normalise_obs=True,
                          deprecated_testing_flag=deprecated_testing_flag,
                          device=device)
         self._gamma: float = cfg.algorithm.gamma
@@ -65,6 +66,7 @@ class OnlineExperiment(ExperimentBase, ABC):
         value_targets = []
         for i, v in enumerate(value):
             value_targets.append(td_lambda(batch, self._lmbda, self._gamma, v))
+
         value_targets = torch.stack(value_targets)
         bit_mask = torch.rand(value_targets.shape, device=self.device) < 0.5
         value_targets = value_targets * bit_mask
@@ -82,12 +84,19 @@ class OnlineExperiment(ExperimentBase, ABC):
                 self.optim_v.step()
         return total_value_loss
     
-    def policy_update(self, batch: Transitions):
+    def policy_update(self, batch: Transitions, step: int):
         pass
 
     def run(self):
         self.tm.reset(self.collector.env, self.collector.obs)
         step, steps = 0, self.cfg.train.total_frames
+
+        if self.rmv is not None:
+            batch = self.collector.early_start(n=1000, append_memory=False)
+            batch = build_transition_from_list(batch, device=self.device)
+            self.rmv.add_tensor_batch(batch.s_0)
+        self.collector.obs, _ = self.collector.env.reset()
+
         while step < steps:
             # Collect batch
             batch_ = []
@@ -102,6 +111,9 @@ class OnlineExperiment(ExperimentBase, ABC):
                     break
             batch = build_transition_from_list(batch_, device=self.device)
 
+            batch.s_0 = self.rmv.transform(batch.s_0)
+            batch.s_1 = self.rmv.transform(batch.s_1)
+
             # Intrinsic Update
             for _ in range(self._n_update_epochs):
                 for i, mb in generate_minibatches(batch, mb_size=self._mb_size, rng=self.rng):
@@ -114,9 +126,37 @@ class OnlineExperiment(ExperimentBase, ABC):
             total_value_loss = self.value_update(batch)
 
             # Policy Update (If needed)
-            self.policy_update(batch)
+            self.policy_update(batch, step)
 
             # Always reset? Or only reset on truncation?
             self._reset(batch_[-1][0], batch_[-1][4])
             self.logger.log({"train/value_loss": total_value_loss})
             self.logger.epoch()
+
+from kitten.policy import Policy
+from kitten.nn import ClassicalDiscreteStochasticActor, ClassicalValue
+from kitten.rl.advantage import GeneralisedAdvantageEstimator
+from kitten.rl.ppo import ProximalPolicyOptimisation
+class PPOExperiment(OnlineExperiment):
+    def _build_policy(self) -> None:
+        super()._build_policy()
+        gamma, lmbda = self.cfg.algorithm.gamma, self.cfg.algorithm.lmbda
+        self._actor = ClassicalDiscreteStochasticActor(self.env, self.rng.build_generator()).to(self.device)
+        gae = GeneralisedAdvantageEstimator(self.value, lmbda, gamma)
+        self._ppo = ProximalPolicyOptimisation(
+            actor=self._actor,
+            advantage_estimation=gae,
+            rng=self.rng.build_generator()
+        )
+        self._policy = Policy(fn=self._ppo.policy_fn, device=self.device)
+    
+    @property
+    def policy(self):
+        return self._policy
+
+    def _build_value(self) -> Value:
+        return ClassicalValue(self.env).to(self.device) 
+    
+    def policy_update(self, batch: Transitions, step: int):
+        super().policy_update(batch, step)
+        self._ppo.update(batch, aux=None, step=step)
