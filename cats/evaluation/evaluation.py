@@ -12,6 +12,7 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 import matplotlib.cm as cm
 from sklearn.neighbors import KernelDensity
+from gym_continuous_maze.gym_lidar_maze import ContinuousLidarMaze
 
 from kitten.experience.memory import ReplayBuffer
 from kitten.experience import Transitions
@@ -20,7 +21,7 @@ if TYPE_CHECKING:
     from ..agent.experiment import ExperimentBase
 
 
-def entropy_memory(memory: ReplayBuffer) -> float:
+def entropy_memory(memory: ReplayBuffer, ) -> float:
     # Construct a density estimator
     s = Transitions(*memory.sample(len(memory))[0][:5]).s_0.cpu().numpy()
     kde = KernelDensity(kernel="gaussian", bandwidth="scott").fit(s)
@@ -60,8 +61,18 @@ def visualise_state_targets(
 
 def inverse_to_env(env: gym.Env, s):
     match env.spec.id:
-        case w if w in ["MountainCarContinuous-v0", "MountainCar-v0"]:
+        case w if w in ["MountainCarContinuous-v0", "MountainCar-v0", "ContinuousMaze-v0"]:
             return s
+        case "ContinuousLidarMaze-v0":
+            assert isinstance(env.unwrapped, ContinuousLidarMaze)
+            is_tensor = isinstance(s, torch.Tensor)
+            if is_tensor:
+                s = s.detach().cpu().numpy()
+            lidar = []
+            for pos in s:
+                lidar.append(env.unwrapped.get_lidar_data(pos))
+            lidar = np.array(lidar)
+            return np.concatenate((s, lidar), axis=1)
         case "Pendulum-v1":
             return np.stack((np.cos(s[:, 0]), np.sin(s[:, 0]), s[:, 1]), axis=1)
         case _:
@@ -82,6 +93,20 @@ def env_to_2d(env: gym.Env, s):
                     "Velocity",
                     env.observation_space.low[1],
                     env.observation_space.high[1],
+                ),
+            )
+        case w if w in ["ContinuousMaze-v0", "ContinuousLidarMaze-v0"]:
+            return (
+                s[:, :2] if s is not None else None,
+                (
+                    "X",
+                    env.observation_space.low[0],
+                    env.observation_space.high[0]
+                ),
+                (
+                    "Y",
+                    env.observation_space.low[1],
+                    env.observation_space.high[1]
                 ),
             )
         case "Pendulum-v1":
@@ -147,7 +172,7 @@ def generate_2d_grid(experiment: ExperimentBase):
     grid_X, grid_Y = torch.meshgrid((X, Y))
     states = torch.stack((grid_X.flatten(), grid_Y.flatten())).T
     # Observation Normalisation
-    s = torch.tensor(inverse_to_env(experiment.env, states), device=experiment.device)
+    s = torch.tensor(inverse_to_env(experiment.env, states), device=experiment.device, dtype=torch.float32)
     if experiment.rmv is not None:
         s = experiment.rmv.transform(s)
     return s, states, x_label, y_label

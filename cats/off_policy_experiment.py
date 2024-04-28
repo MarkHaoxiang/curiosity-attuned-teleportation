@@ -24,7 +24,7 @@ from .logging import *
 from .evaluation import *
 
 from .agent.experiment import ExperimentBase, TeleportationResetModule
-from .agent.classic_control import ClassicalResetCritic
+from .agent.classic_control import ClassicalResetCritic, ClassicalInjectionResetCritic
 
 
 class CatsExperiment(ExperimentBase):
@@ -36,7 +36,7 @@ class CatsExperiment(ExperimentBase):
         deprecated_testing_flag: bool = False,
         device: Device = "cpu",
     ):
-        super().__init__(cfg, True, deprecated_testing_flag, device)
+        super().__init__(cfg, cfg.train.normalise_obs, deprecated_testing_flag, device)
         # Parameters
         self.teleport_cfg = self.cfg.cats.teleport
         self.fixed_reset = self.cfg.cats.fixed_reset
@@ -49,6 +49,11 @@ class CatsExperiment(ExperimentBase):
         # Init
         self.logger.register_provider(self.algorithm, "train")
         self.collected_intrinsic_reward = 0
+    
+    @property
+    def reset_value(self):
+        return self._reset_value
+
 
     def run(self):
         """Default Experiment run"""
@@ -66,14 +71,14 @@ class CatsExperiment(ExperimentBase):
 
             # Newly collected
             c_batch = build_transition_from_list(collected, device=self.device)
-            c_batch.s_0 = self.rmv.transform(c_batch.s_0)
-            c_batch.s_1 = self.rmv.transform(c_batch.s_1)
+            if self.rmv is not None:
+                self.rmv.add_tensor_batch(
+                    torch.tensor(s_1_c, device=self.device).unsqueeze(0)
+                )
+                c_batch.s_0 = self.rmv.transform(c_batch.s_0)
+                c_batch.s_1 = self.rmv.transform(c_batch.s_1)
+
             self.collected_intrinsic_reward += self.intrinsic.reward(c_batch, update_normalisation=False)[2].sum().item()
-
-            self.rmv.add_tensor_batch(
-                torch.tensor(s_1_c, device=self.device).unsqueeze(0)
-            )
-
             # Teleport
             self.tm.update(env=self.collector.env, obs=s_0_c)
 
@@ -115,11 +120,21 @@ class CatsExperiment(ExperimentBase):
                 a_2 = self.algorithm.policy_fn(reset_sample, critic=c_2.target)
                 target_max_1 = c_1.target.q(reset_sample, a_1).squeeze()
                 target_max_2 = c_2.target.q(reset_sample, a_2).squeeze()
-                self.reset_value = (
+                self._reset_value = (
                     torch.minimum(target_max_1, target_max_2).mean().item()
                     - self.reset_as_an_action.penalty
                 )
-                aux.v_1 = aux.v_1 * self.reset_value
+                if self.cfg.cats.reset_inject_critic:
+                    if isinstance(self.algorithm, QTOptCats):
+                        for critic in self.algorithm.critics:
+                            critic.net.reset_value = self._reset_value * self.algorithm._gamma
+                            critic.target.reset_value = self._reset_value * self.algorithm._gamma
+                    else:
+                        raise NotImplementedError
+                    # Just learn the single step reward
+                    aux.v_1 = aux.v_1 * 0
+                else:
+                    aux.v_1 = aux.v_1 * self._reset_value
                 if self.reset_as_an_action.enable:
                     select = torch.logical_or(batch.t, batch.d)
                 elif self.death_is_not_the_end:
@@ -128,8 +143,8 @@ class CatsExperiment(ExperimentBase):
                 aux.reset_value_mixin_enable = True
                 # Since we don't consider extrinsic rewards (for now)
                 # Manually add the penalty to intrinsic rewards
-                if self.reset_as_an_action.enable:
-                    r_i = r_i
+                # if self.reset_as_an_action.enable:
+                #     r_i = r_i
 
             if self.death_is_not_the_end:
                 batch.d = torch.zeros_like(batch.d, device=self.device).bool()
@@ -142,9 +157,9 @@ class CatsExperiment(ExperimentBase):
                 self.logger.epoch()
                 log = {}
                 if self.death_is_not_the_end or self.reset_as_an_action.enable:
-                    log["reset_value"] = self.reset_value
+                    log["reset_value"] = self._reset_value
                 log["collected_intrinsic_reward"] = self.collected_intrinsic_reward
-                log["evaluate/intrinsic"] = evaluate_intrinsic(self)
+                # log["evaluate/intrinsic"] = evaluate_intrinsic(self)
                 # log["evaluate/entropy"] = entropy_memory(self.memory.rb)
                 self.logger.log(log)
 
@@ -172,16 +187,20 @@ class CatsExperiment(ExperimentBase):
         results = self.collector.early_start(n)
         self.collector.set_policy(policy)
         batch = build_transition_from_list(results, device=self.device)
-        self.rmv.add_tensor_batch(batch.s_1)
-        batch.s_0, batch.s_1 = self.rmv.transform(batch.s_0), self.rmv.transform(
-            batch.s_1
-        )
+        if self.rmv is not None:
+            self.rmv.add_tensor_batch(batch.s_1)
+            batch.s_0, batch.s_1 = self.rmv.transform(batch.s_0), self.rmv.transform(
+                batch.s_1
+            )
         self.intrinsic.initialise(batch)
 
     def _build_policy(self):
         def build_critic_():
             if isinstance(self.env, ResetActionWrapper) and isinstance(self.env.action_space, Box):
-                critic = ClassicalResetCritic(self.env, **self.cfg.algorithm.critic)
+                if self.cfg.cats.reset_inject_critic:
+                    critic = ClassicalInjectionResetCritic(self.env, **self.cfg.algorithm.critic)
+                else:
+                    critic = ClassicalResetCritic(self.env, **self.cfg.algorithm.critic)
             else:
                 critic = build_critic(self.env, **self.cfg.algorithm.critic)
             critic = critic.to(self.device)

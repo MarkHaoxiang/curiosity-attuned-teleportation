@@ -1,5 +1,6 @@
 import gymnasium as gym
 from minigrid.wrappers import FullyObsWrapper, ImgObsWrapper, ReseedWrapper, PositionBonus
+import gym_continuous_maze
 
 from kitten.common import util
 
@@ -9,15 +10,27 @@ from cats.env import (
 )
 from cats.reset import ResetActionWrapper
 
-# Offline, continuous,
-classic_control = ["MountainCarContinuous-v0", "Pendulum-v1", "MountainCar-v0", "CartPole-v1", "Acrobot-v1", "HalfCheetah-v4"]
+# Simple MLP networks,
+classic = [
+    # Classic Control
+    "MountainCarContinuous-v0",
+    "Pendulum-v1",
+    "MountainCar-v0",
+    "CartPole-v1",
+    "Acrobot-v1",
+    # MuJoCo
+    "HalfCheetah-v4",
+    # GymContinuousMaze
+    "ContinuousMaze-v0",
+    "ContinuousLidarMaze-v0"
+]
 
 # Minigrid
 minigrid = ["MiniGrid-FourRooms-v0"]
 
 
 def build_env(cfg) -> gym.Env:
-    if cfg.env.name in classic_control:
+    if cfg.env.name in classic:
         env = util.build_env(**cfg.env)
         if cfg.cats.fixed_reset:
             env = FixedResetWrapper(env)

@@ -8,7 +8,7 @@ from kitten.common import util
 from cats.teleport import *
 from cats.reset import *
 
-from .env import classic_control, minigrid
+from .env import classic, minigrid
 from .minigrid import build_rnd
 
 
@@ -102,7 +102,7 @@ def build_data(cfg,
 
 
 def build_intrinsic(cfg, env: gym.Env, device: Device = "cpu"):
-    if cfg.env.name in classic_control:
+    if cfg.env.name in classic:
         return util.build_intrinsic(env, cfg.intrinsic, device=device)
     elif cfg.env.name in minigrid:
         assert cfg.intrinsic.type == "rnd", "Not yet implemented"

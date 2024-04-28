@@ -1,1 +1,1 @@
-from .critic import ClassicalResetCritic
+from .critic import ClassicalResetCritic, ClassicalInjectionResetCritic

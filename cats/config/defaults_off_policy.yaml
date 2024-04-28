@@ -7,13 +7,14 @@ env:
   max_episode_steps: 1000
 cats:
   fixed_reset: false
+  reset_inject_critic: false
   teleport_interval_enable: false
   teleport_interval: 100
   death_not_end: false
   enable_policy_sampling: false
   reset_action:
     enable: false
-    penalty: 0.0
+    penalty: 0
   env_action_noise: 0.0
   teleport:
     enable: false
@@ -24,12 +25,13 @@ cats:
       type: episode
       capacity: 1024
 train:
+  normalise_obs: true
   initial_collection_size: 256
   total_frames: 4096
   minibatch_size: 128
 algorithm:
   type: qt_opt
-  gamma: 0.9
+  gamma: 0.99
   tau: 0.005
   lr: 0.01
   update_frequency: 1

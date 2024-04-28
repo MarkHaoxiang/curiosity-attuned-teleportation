@@ -159,10 +159,6 @@ class ResetPolicy(Policy):
         assert isinstance(env, ResetActionWrapper), "Env should be reset_action"
         self._env = env
 
-    @property
-    def fn(self):
-        return self._policy.fn
-
     def reset(self) -> None:
         super().reset()
         self._policy.reset()
@@ -180,7 +176,7 @@ class ResetPolicy(Policy):
         assert isinstance(
             self._env.action_space, gym.spaces.Box
         ), "Not yet implemented for non-box action spaces"
-        action = self._policy(obs, *args, **kwargs)
+        action = self.transform_post(self._policy(self.transform_pre(obs), *args, **kwargs))
         self._step_counter += 1
         if self.train:
             if self._step_counter < self._minimum_exploration_time:
