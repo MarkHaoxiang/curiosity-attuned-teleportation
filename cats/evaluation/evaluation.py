@@ -232,7 +232,8 @@ def visualise_reset_policy(experiment: ExperimentBase, fig: Figure, ax: Axes):
         ax.set_title("Reset Actions")
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
-        fig.colorbar(m, ax=ax)
+        cbar = fig.colorbar(m, ax=ax)
+        cbar.set_label("Reset (> 0.5)", rotation=270, labelpad=15)
 
 
 def visualise_experiment_value_reset_estimate(

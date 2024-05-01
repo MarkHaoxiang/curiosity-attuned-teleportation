@@ -88,7 +88,6 @@ class OnlineExperiment(ExperimentBase, ABC):
         pass
 
     def run(self):
-        self.tm.reset(self.collector.env, self.collector.obs)
         step, steps = 0, self.cfg.train.total_frames
 
         if self.rmv is not None:
@@ -97,6 +96,7 @@ class OnlineExperiment(ExperimentBase, ABC):
             self.rmv.add_tensor_batch(batch.s_0)
         self.collector.obs, _ = self.collector.env.reset()
 
+        self.tm.reset(self.collector.env, self.collector.obs)
         while step < steps:
             # Collect batch
             batch_ = []
@@ -105,14 +105,14 @@ class OnlineExperiment(ExperimentBase, ABC):
                 step += 1
                 data = self.collector.collect(n=1)[-1]
                 batch_.append(data)
-                if self.cfg.cats.teleport.enable:
-                    self.tm.update(self.collector.env, obs=data[0])
+                self.tm.update(self.collector.env, obs=data[0])
                 if data[-2] or data[-1]: # Terminated or truncated
                     break
             batch = build_transition_from_list(batch_, device=self.device)
-
-            batch.s_0 = self.rmv.transform(batch.s_0)
-            batch.s_1 = self.rmv.transform(batch.s_1)
+            
+            if self.rmv is not None:
+                batch.s_0 = self.rmv.transform(batch.s_0)
+                batch.s_1 = self.rmv.transform(batch.s_1)
 
             # Intrinsic Update
             for _ in range(self._n_update_epochs):

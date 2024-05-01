@@ -13,10 +13,12 @@ from cats.evaluation import *
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def run(cfg: DictConfig, save: bool = True):
+def run(cfg: DictConfig, save: bool = True, device=None):
+    if device == None:
+        device=DEVICE
     experiment = CatsExperiment(
         cfg=cfg,
-        device=DEVICE,
+        device=device,
     )
     experiment.run()
     if save:

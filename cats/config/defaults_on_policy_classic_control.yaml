@@ -13,9 +13,9 @@ cats:
   env_action_noise: 0.0
   teleport:
     enable: false
-    type: e_greedy
+    type: boltzmann
     kwargs:
-      e: 0.1
+      alpha: 2.0
     memory:
       type: fifo
       capacity: 1024
