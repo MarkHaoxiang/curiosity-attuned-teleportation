@@ -136,6 +136,7 @@ class CatsExperiment(ExperimentBase):
                 else:
                     aux.v_1 = aux.v_1 * self._reset_value
                 if self.reset_as_an_action.enable:
+                    # TODO: Reset should really just be death, not truncate
                     select = torch.logical_or(batch.t, batch.d)
                 elif self.death_is_not_the_end:
                     select = batch.d
@@ -174,7 +175,7 @@ class CatsExperiment(ExperimentBase):
         """
         self._reset_env()
         policy = self.collector.policy
-        if not self.reset_as_an_action.enable:
+        if not (self.reset_as_an_action.enable and self.cfg.cats.reset_action.domain_critic):
             self.collector.set_policy(Policy(lambda _: self.env.action_space.sample()))
         else:
             # TODO: Edit reset evaluation policy with a small probability of of resets,
@@ -196,7 +197,7 @@ class CatsExperiment(ExperimentBase):
 
     def _build_policy(self):
         def build_critic_():
-            if isinstance(self.env, ResetActionWrapper) and isinstance(self.env.action_space, Box):
+            if isinstance(self.env, ResetActionWrapper) and isinstance(self.env.action_space, Box) and self.cfg.cats.reset_action.domain_critic:
                 if self.cfg.cats.reset_inject_critic:
                     critic = ClassicalInjectionResetCritic(self.env, **self.cfg.algorithm.critic)
                 else:
@@ -255,7 +256,7 @@ class CatsExperiment(ExperimentBase):
             device=self.device,
             **self.cfg.noise,
         )
-        if self.cfg.cats.reset_action.enable:
+        if self.cfg.cats.reset_action.enable and self.cfg.cats.reset_action.domain_critic:
             self._policy = ResetPolicy(env=self.env, policy=self._policy)
 
     @property
