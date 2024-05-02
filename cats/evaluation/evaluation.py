@@ -201,10 +201,15 @@ def visualise_experiment_value_estimate(
         cbar.set_label("Value", rotation=270, labelpad=15)
 
 
-def visualise_experiment_policy(experiment: ExperimentBase, fig: Figure, ax: Axes):
+def visualise_experiment_policy(
+    experiment: ExperimentBase,
+    fig: Figure,
+    ax: Axes,
+    action_axis: int = 0,
+):
     # Policy
     s, states, x_label, y_label = generate_2d_grid(experiment)
-    actions = experiment.algorithm.policy_fn(s)[:, :1]
+    actions = experiment.algorithm.policy_fn(s)[:, action_axis]
     if ax is not None:
         norm = mpl.colors.Normalize(vmin=-1, vmax=1)
         cmap = cm.viridis

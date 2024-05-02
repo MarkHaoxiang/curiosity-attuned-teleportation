@@ -93,6 +93,7 @@ class UCBTeleport(TeleportStrategy):
         self,
         s: torch.Tensor,
     ) -> int:
+        # TODO: Minibatch
         mu, var = self._algorithm.mu_var(s)
         return np.argmax(mu + var * self._c)
 
