@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import copy
 from typing import Any
+import math
 from logging import WARNING
 
 import numpy as np
@@ -15,6 +16,7 @@ from kitten.logging import log
 from kitten.experience.memory import ReplayBuffer
 from kitten.experience.collector import GymCollector
 from kitten.experience.interface import Memory
+from kitten.rl.common.batch import generate_minibatches
 
 from kitten.nn import HasValue
 from cats.rl import QTOptCats
@@ -24,6 +26,15 @@ class TeleportStrategy(ABC):
     def __init__(self, algorithm: QTOptCats) -> None:
         super().__init__()
         self._algorithm = algorithm
+    
+    def value(self, s, fn, mb_size: int = 512):
+        results = []
+        n = len(s)
+        for i in range(math.ceil(n / mb_size)):
+            batch = s[i*mb_size: min(n, (i+1)*mb_size)]
+            results.append(fn(batch))
+        results = torch.concatenate(results)
+        return results        
 
     @abstractmethod
     def select(self, s: torch.Tensor) -> int:
@@ -44,7 +55,8 @@ class EpsilonGreedyTeleport(TeleportStrategy):
             self._rng = rng
 
     def select(self, s: torch.Tensor) -> int:
-        v = self._algorithm.value.v(s)
+        with torch.no_grad():
+            v = self.value(s, self._algorithm.value.v)
         teleport_index = torch.argmax(v).item()
         if self._rng.numpy.random() < self._e:
             teleport_index = self._rng.numpy.integers(len(v))
@@ -65,8 +77,8 @@ class BoltzmannTeleport(TeleportStrategy):
             self._rng = rng
 
     def select(self, s: torch.Tensor) -> int:
-        v = self._algorithm.value.v(s)
         with torch.no_grad():
+            v = self.value(s, self._algorithm.value.v)
             p = (v**self._a).cpu().numpy()
         p = p.squeeze() / p.sum()
         return self._rng.numpy.choice(len(v), p=p)

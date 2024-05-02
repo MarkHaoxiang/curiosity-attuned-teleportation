@@ -23,7 +23,7 @@ from .teleport import *
 from .logging import *
 from .evaluation import *
 
-from .agent.experiment import ExperimentBase, TeleportationResetModule
+from .agent.experiment import ExperimentBase
 from .agent.classic_control import ClassicalResetCritic, ClassicalInjectionResetCritic
 
 
@@ -159,7 +159,7 @@ class CatsExperiment(ExperimentBase):
                 if self.death_is_not_the_end or self.reset_as_an_action.enable:
                     log["reset_value"] = self._reset_value
                 log["collected_intrinsic_reward"] = self.collected_intrinsic_reward
-                log["evaluate/intrinsic"] = evaluate_intrinsic(self)
+                # log["evaluate/intrinsic"] = evaluate_intrinsic(self)
                 # log["evaluate/entropy"] = entropy_memory(self.memory.rb)
                 self.logger.log(log)
 
