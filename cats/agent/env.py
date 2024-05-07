@@ -1,5 +1,10 @@
 import gymnasium as gym
-from minigrid.wrappers import FullyObsWrapper, ImgObsWrapper, ReseedWrapper, PositionBonus
+from minigrid.wrappers import (
+    FullyObsWrapper,
+    ImgObsWrapper,
+    ReseedWrapper,
+    PositionBonus,
+)
 import gym_continuous_maze
 
 from kitten.common import util
@@ -22,7 +27,7 @@ classic = [
     "HalfCheetah-v4",
     # GymContinuousMaze
     "ContinuousMaze-v0",
-    "ContinuousLidarMaze-v0"
+    "ContinuousLidarMaze-v0",
 ]
 
 # Minigrid
@@ -43,12 +48,14 @@ def build_env(cfg) -> gym.Env:
         env = util.build_env(**cfg.env)
         # Convert to MDP
         env = FullyObsWrapper(env)
-        #env = RGBImgObsWrapper(env)
+        # env = RGBImgObsWrapper(env)
         env = ImgObsWrapper(env)
         if cfg.cats.fixed_reset:
             env = ReseedWrapper(env, seeds=(int(cfg.seed),))
     else:
         raise ValueError("Unknown environment")
     if cfg.cats.reset_action.enable:
-        env = ResetActionWrapper(env, penalty=cfg.cats.reset_action.penalty, deterministic=True)
+        env = ResetActionWrapper(
+            env, penalty=cfg.cats.reset_action.penalty, deterministic=True
+        )
     return env

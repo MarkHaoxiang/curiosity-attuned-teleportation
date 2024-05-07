@@ -86,11 +86,7 @@ def build_teleport(
     return trm, tm, rm, ts
 
 
-def build_data(cfg,
-               normalise_obs: bool,
-               env: gym.Env,
-               policy: Policy,
-               device: Device):
+def build_data(cfg, normalise_obs: bool, env: gym.Env, policy: Policy, device: Device):
     memory, rmv = build_replay_buffer(
         env,
         capacity=cfg.train.total_frames + cfg.train.initial_collection_size,

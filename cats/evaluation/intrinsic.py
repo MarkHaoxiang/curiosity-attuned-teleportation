@@ -17,6 +17,7 @@ from cats.reset import ResetActionWrapper
 if TYPE_CHECKING:
     from ..agent.experiment import ExperimentBase
 
+
 @dataclass
 class PseudoTransitions:
     s_0 = None
@@ -26,14 +27,16 @@ class PseudoTransitions:
     d = None
     t = None
 
+
 def get_state_action_samples(env: Env, samples: int = 10000):
     env.action_space.seed(0)
     env.observation_space.seed(0)
     states = np.array([env.observation_space.sample() for _ in range(10000)])
     actions = np.array([env.action_space.sample() for _ in range(10000)])
     if isinstance(env, ResetActionWrapper):
-        actions[:, -1] = 0 # No Resets
-    return states, actions              
+        actions[:, -1] = 0  # No Resets
+    return states, actions
+
 
 def mcc_step(s, a):
     # Batch step with mountain car transition, but doesn't check action bounds
@@ -50,9 +53,10 @@ def mcc_step(s, a):
     velocity = np.clip(velocity, -MAX_SPEED, MAX_SPEED)
     position += velocity
     position = np.clip(position, MIN_POSITION, MAX_POSITION)
-    velocity = velocity * ~((position == MIN_POSITION) & (velocity < 0)) 
+    velocity = velocity * ~((position == MIN_POSITION) & (velocity < 0))
 
     return np.concatenate((position, velocity), axis=1)
+
 
 def evaluate_intrinsic(experiment: ExperimentBase, samples: int = 10000):
     if isinstance(experiment.intrinsic, Disagreement):
@@ -60,6 +64,7 @@ def evaluate_intrinsic(experiment: ExperimentBase, samples: int = 10000):
     elif isinstance(experiment.intrinsic, RandomNetworkDistillation):
         return evaluate_rnd(experiment, samples)
     return 0
+
 
 def evaluate_disagreement(experiment: ExperimentBase, samples: int = 10000) -> float:
     with torch.no_grad():
@@ -76,17 +81,21 @@ def evaluate_disagreement(experiment: ExperimentBase, samples: int = 10000) -> f
         batch.a = a
         return experiment.intrinsic._reward(batch).mean().item()
 
+
 # Aims to evaluate which trained intrinsic model is the best
 def evaluate_rnd(experiment: ExperimentBase, samples: int = 10000) -> float:
     with torch.no_grad():
         env = experiment.env
         device = experiment.device
-        s = torch.tensor(get_state_action_samples(env, samples)[0]).to(device=device, dtype=torch.float32)
+        s = torch.tensor(get_state_action_samples(env, samples)[0]).to(
+            device=device, dtype=torch.float32
+        )
         if experiment.rmv is not None:
             s = experiment.rmv.transform(s)
         rnd = experiment.intrinsic
         assert isinstance(rnd, RandomNetworkDistillation)
         return rnd.forward(s).mean().item()
+
 
 def visualise_rnd(experiment: ExperimentBase, fig: Figure, ax: Axes):
     s, states, x_label, y_label = generate_2d_grid(experiment)

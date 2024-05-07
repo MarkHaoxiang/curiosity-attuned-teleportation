@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from .evaluation import *
 from .intrinsic import *
 
+
 def visualise_classic_control_results(experiment):
     log = experiment.logger.engine.results
 
@@ -87,7 +88,6 @@ def visualise_classic_control_results(experiment):
             ax.scatter(range(len(log["teleport_step"])), log["teleport_step"], s=5)
     else:
         ax.axis("off")
-        
 
     if experiment.cfg.cats.reset_action.enable:
         visualise_reset_policy(experiment, fig, axs[row][2])
@@ -123,5 +123,6 @@ def visualise_classic_control_results(experiment):
     axs[row][2].axis("off")
     axs[row][3].axis("off")
 
+
 rng = np.random.default_rng(0)
-seeds = [rng.integers(2**32-1) for _ in range(10)]
+seeds = [rng.integers(2**32 - 1) for _ in range(10)]

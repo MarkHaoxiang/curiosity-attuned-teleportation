@@ -52,9 +52,7 @@ class ResetMemory:
         return self.reset_target_observations.storage[0]
 
     def select(self, tid: int, collector: GymCollector) -> tuple[gym.Env, NDArray[Any]]:
-        obs = (
-            self.reset_target_observations.fetch_storage(indices=tid)[0].cpu().numpy()
-        )
+        obs = self.reset_target_observations.fetch_storage(indices=tid)[0].cpu().numpy()
         env = copy.deepcopy(self.reset_envs[tid])
         collector.env, collector.obs = env, obs
         collector.env.np_random = self.rng.build_generator().numpy
@@ -113,7 +111,9 @@ class ResetActionWrapper(gym.Wrapper, gym.utils.RecordConstructorArgs):
             else:
                 manual_truncation = self.np_random.random() > action[-1]
         elif isinstance(self.action_space, gym.spaces.Discrete):
-            manual_truncation = action == self.action_space.start + self.action_space.n - 1
+            manual_truncation = (
+                action == self.action_space.start + self.action_space.n - 1
+            )
         else:
             raise NotImplementedError()
         return manual_truncation
@@ -176,7 +176,9 @@ class ResetPolicy(Policy):
         assert isinstance(
             self._env.action_space, gym.spaces.Box
         ), "Not yet implemented for non-box action spaces"
-        action = self.transform_post(self._policy(self.transform_pre(obs), *args, **kwargs))
+        action = self.transform_post(
+            self._policy(self.transform_pre(obs), *args, **kwargs)
+        )
         self._step_counter += 1
         if self.train:
             if self._step_counter < self._minimum_exploration_time:

@@ -73,7 +73,6 @@ class ExperimentBase(ABC):
     @abstractmethod
     def policy(self) -> Policy:
         raise NotImplementedError
-    
 
     def _reset(self, obs: NDArray[Any], terminate: bool):
         # Collector actually already resets the policy, so don't need to repeat here

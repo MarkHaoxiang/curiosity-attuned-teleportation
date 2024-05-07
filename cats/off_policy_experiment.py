@@ -49,11 +49,10 @@ class CatsExperiment(ExperimentBase):
         # Init
         self.logger.register_provider(self.algorithm, "train")
         self.collected_intrinsic_reward = 0
-    
+
     @property
     def reset_value(self):
         return self._reset_value
-
 
     def run(self):
         """Default Experiment run"""
@@ -78,14 +77,21 @@ class CatsExperiment(ExperimentBase):
                 c_batch.s_0 = self.rmv.transform(c_batch.s_0)
                 c_batch.s_1 = self.rmv.transform(c_batch.s_1)
 
-            self.collected_intrinsic_reward += self.intrinsic.reward(c_batch, update_normalisation=False)[2].sum().item()
+            self.collected_intrinsic_reward += (
+                self.intrinsic.reward(c_batch, update_normalisation=False)[2]
+                .sum()
+                .item()
+            )
             # Teleport
             self.tm.update(env=self.collector.env, obs=s_0_c)
 
             if d_c or t_c:
                 self._reset(s_1_c, terminate=d_c)
                 last_teleport_time = step
-            elif not self.cfg.cats.reset_action.enable and self.cfg.cats.teleport_interval_enable:
+            elif (
+                not self.cfg.cats.reset_action.enable
+                and self.cfg.cats.teleport_interval_enable
+            ):
                 if step >= last_teleport_time + self.cfg.cats.teleport_interval:
                     self._reset(s_1_c, terminate=d_c)
                     last_teleport_time = step
@@ -127,8 +133,12 @@ class CatsExperiment(ExperimentBase):
                 if self.cfg.cats.reset_inject_critic:
                     if isinstance(self.algorithm, QTOptCats):
                         for critic in self.algorithm.critics:
-                            critic.net.reset_value = self._reset_value * self.algorithm._gamma
-                            critic.target.reset_value = self._reset_value * self.algorithm._gamma
+                            critic.net.reset_value = (
+                                self._reset_value * self.algorithm._gamma
+                            )
+                            critic.target.reset_value = (
+                                self._reset_value * self.algorithm._gamma
+                            )
                     else:
                         raise NotImplementedError
                     # Just learn the single step reward
@@ -175,7 +185,9 @@ class CatsExperiment(ExperimentBase):
         """
         self._reset_env()
         policy = self.collector.policy
-        if not (self.reset_as_an_action.enable and self.cfg.cats.reset_action.domain_critic):
+        if not (
+            self.reset_as_an_action.enable and self.cfg.cats.reset_action.domain_critic
+        ):
             self.collector.set_policy(Policy(lambda _: self.env.action_space.sample()))
         else:
             # TODO: Edit reset evaluation policy with a small probability of of resets,
@@ -197,35 +209,45 @@ class CatsExperiment(ExperimentBase):
 
     def _build_policy(self):
         def build_critic_():
-            if isinstance(self.env, ResetActionWrapper) and isinstance(self.env.action_space, Box) and self.cfg.cats.reset_action.domain_critic:
+            if (
+                isinstance(self.env, ResetActionWrapper)
+                and isinstance(self.env.action_space, Box)
+                and self.cfg.cats.reset_action.domain_critic
+            ):
                 if self.cfg.cats.reset_inject_critic:
-                    critic = ClassicalInjectionResetCritic(self.env, **self.cfg.algorithm.critic)
+                    critic = ClassicalInjectionResetCritic(
+                        self.env, **self.cfg.algorithm.critic
+                    )
                 else:
                     critic = ClassicalResetCritic(self.env, **self.cfg.algorithm.critic)
             else:
                 critic = build_critic(self.env, **self.cfg.algorithm.critic)
             critic = critic.to(self.device)
             return critic
+
         match self.cfg.algorithm.type:
             case "qt_opt":
                 self.algorithm = QTOptCats(
-                build_critic=build_critic_,
-                action_space=self.env.action_space,
-                obs_space=self.env.observation_space,
-                rng=self.rng.build_generator(),
-                device=self.device,
-                **self.cfg.algorithm,
-            )
+                    build_critic=build_critic_,
+                    action_space=self.env.action_space,
+                    obs_space=self.env.observation_space,
+                    rng=self.rng.build_generator(),
+                    device=self.device,
+                    **self.cfg.algorithm,
+                )
             case "ddpg":
                 self.algorithm = DeepDeterministicPolicyGradient(
                     actor_network=build_actor(self.env, **self.cfg.algorithm.actor),
                     critic_network=build_critic_(),
                     device=self.device,
-                    **self.cfg.algorithm
+                    **self.cfg.algorithm,
                 )
             case "td3":
                 env_action_scale = (
-                torch.tensor(self.env.action_space.high - self.env.action_space.low, device=self.device)
+                    torch.tensor(
+                        self.env.action_space.high - self.env.action_space.low,
+                        device=self.device,
+                    )
                     / 2.0
                 )
                 env_action_min = torch.tensor(
@@ -235,12 +257,12 @@ class CatsExperiment(ExperimentBase):
                     self.env.action_space.high, dtype=torch.float32, device=self.device
                 )
                 self.algorithm = TwinDelayedDeepDeterministicPolicyGradient(
-                    actor_network=build_actor(self.env,  **self.cfg.algorithm.actor),
+                    actor_network=build_actor(self.env, **self.cfg.algorithm.actor),
                     critic_1_network=build_critic_(),
                     critic_2_network=build_critic_(),
                     env_action_min=env_action_min,
                     env_action_max=env_action_max,
-                    env_action_scale=env_action_scale
+                    env_action_scale=env_action_scale,
                 )
             case _:
                 raise ValueError("Unknown agent algorithm")
@@ -256,7 +278,10 @@ class CatsExperiment(ExperimentBase):
             device=self.device,
             **self.cfg.noise,
         )
-        if self.cfg.cats.reset_action.enable and self.cfg.cats.reset_action.domain_critic:
+        if (
+            self.cfg.cats.reset_action.enable
+            and self.cfg.cats.reset_action.domain_critic
+        ):
             self._policy = ResetPolicy(env=self.env, policy=self._policy)
 
     @property

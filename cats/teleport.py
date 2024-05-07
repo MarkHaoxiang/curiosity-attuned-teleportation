@@ -26,15 +26,15 @@ class TeleportStrategy(ABC):
     def __init__(self, algorithm: QTOptCats) -> None:
         super().__init__()
         self._algorithm = algorithm
-    
+
     def value(self, s, fn, mb_size: int = 512):
         results = []
         n = len(s)
         for i in range(math.ceil(n / mb_size)):
-            batch = s[i*mb_size: min(n, (i+1)*mb_size)]
+            batch = s[i * mb_size : min(n, (i + 1) * mb_size)]
             results.append(fn(batch))
         results = torch.concatenate(results)
-        return results        
+        return results
 
     @abstractmethod
     def select(self, s: torch.Tensor) -> int:

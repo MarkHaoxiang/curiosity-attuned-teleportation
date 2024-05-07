@@ -1,9 +1,9 @@
-
 import copy
 import gymnasium as gym
 
 from kitten.common.rng import Generator
 from kitten.policy import Policy
+
 
 class ExplorationPolicy(Policy):
     """Purely Random Exploration with probability of repeat"""

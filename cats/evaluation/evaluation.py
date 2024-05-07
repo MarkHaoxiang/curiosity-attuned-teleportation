@@ -21,7 +21,9 @@ if TYPE_CHECKING:
     from ..agent.experiment import ExperimentBase
 
 
-def entropy_memory(memory: ReplayBuffer, ) -> float:
+def entropy_memory(
+    memory: ReplayBuffer,
+) -> float:
     # Construct a density estimator
     s = Transitions(*memory.sample(len(memory))[0][:5]).s_0.cpu().numpy()
     kde = KernelDensity(kernel="gaussian", bandwidth="scott").fit(s)
@@ -61,7 +63,11 @@ def visualise_state_targets(
 
 def inverse_to_env(env: gym.Env, s):
     match env.spec.id:
-        case w if w in ["MountainCarContinuous-v0", "MountainCar-v0", "ContinuousMaze-v0"]:
+        case w if w in [
+            "MountainCarContinuous-v0",
+            "MountainCar-v0",
+            "ContinuousMaze-v0",
+        ]:
             return s
         case "ContinuousLidarMaze-v0":
             assert isinstance(env.unwrapped, ContinuousLidarMaze)
@@ -81,7 +87,7 @@ def inverse_to_env(env: gym.Env, s):
 
 def env_to_2d(env: gym.Env, s):
     match env.spec.id:
-        case w if w in  ["MountainCarContinuous-v0", "MountainCar-v0"]:
+        case w if w in ["MountainCarContinuous-v0", "MountainCar-v0"]:
             return (
                 s if s is not None else None,
                 (
@@ -98,16 +104,8 @@ def env_to_2d(env: gym.Env, s):
         case w if w in ["ContinuousMaze-v0", "ContinuousLidarMaze-v0"]:
             return (
                 s[:, :2] if s is not None else None,
-                (
-                    "X",
-                    env.observation_space.low[0],
-                    env.observation_space.high[0]
-                ),
-                (
-                    "Y",
-                    env.observation_space.low[1],
-                    env.observation_space.high[1]
-                ),
+                ("X", env.observation_space.low[0], env.observation_space.high[0]),
+                ("Y", env.observation_space.low[1], env.observation_space.high[1]),
             )
         case "Pendulum-v1":
             return (
@@ -127,7 +125,9 @@ def env_to_2d(env: gym.Env, s):
             raise ValueError("Environment not yet supported")
 
 
-def visualise_memory(experiment: ExperimentBase, fig: Figure, ax: Axes, cbar: bool = True):
+def visualise_memory(
+    experiment: ExperimentBase, fig: Figure, ax: Axes, cbar: bool = True
+):
     """Visualise state space for given environments"""
 
     env = experiment.env
@@ -172,17 +172,18 @@ def generate_2d_grid(experiment: ExperimentBase):
     grid_X, grid_Y = torch.meshgrid((X, Y))
     states = torch.stack((grid_X.flatten(), grid_Y.flatten())).T
     # Observation Normalisation
-    s = torch.tensor(inverse_to_env(experiment.env, states), device=experiment.device, dtype=torch.float32)
+    s = torch.tensor(
+        inverse_to_env(experiment.env, states),
+        device=experiment.device,
+        dtype=torch.float32,
+    )
     if experiment.rmv is not None:
         s = experiment.rmv.transform(s)
     return s, states, x_label, y_label
 
 
 def visualise_experiment_value_estimate(
-    experiment: ExperimentBase,
-    fig: Figure,
-    ax: Axes,
-    cbar: bool = True
+    experiment: ExperimentBase, fig: Figure, ax: Axes, cbar: bool = True
 ):
     s, states, x_label, y_label = generate_2d_grid(experiment)
     # V
@@ -221,7 +222,6 @@ def visualise_experiment_policy(
         ax.set_ylabel(y_label)
         cbar = fig.colorbar(m, ax=ax)
         cbar.set_label("Action", rotation=270, labelpad=15)
-
 
 
 def visualise_reset_policy(experiment: ExperimentBase, fig: Figure, ax: Axes):
